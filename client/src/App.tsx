@@ -11,6 +11,7 @@ import ContainerManagement from "./pages/ContainerManagement";
 import ComposeManagement from "./pages/ComposeManagement";
 import Monitoring from "./pages/Monitoring";
 import DashboardBuilder from "./pages/DashboardBuilder";
+import NetworkInterfaces from "./pages/NetworkInterfaces";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -24,6 +25,7 @@ function Router() {
         <Route path="/compose" component={ComposeManagement} />
         <Route path="/monitoring" component={Monitoring} />
         <Route path="/dashboard-builder" component={DashboardBuilder} />
+        <Route path="/network/interfaces" component={NetworkInterfaces} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"

@@ -5,6 +5,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -64,7 +65,14 @@ export default function NetworkManagement() {
         <TabsContent value="interfaces" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>物理接口</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>物理接口</CardTitle>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/network/interfaces">
+                    进入接口管理
+                  </Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
