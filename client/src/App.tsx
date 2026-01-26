@@ -11,8 +11,8 @@ import ContainerManagement from "./pages/ContainerManagement";
 import ComposeManagement from "./pages/ComposeManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <DashboardLayout>
       <Switch>
