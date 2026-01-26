@@ -139,3 +139,26 @@
 - [x] 重构DashboardLayout侧边栏,实现二级菜单功能
 - [x] 将网络相关功能整合到"网络管理"二级菜单下
 - [x] 测试菜单展开/折叠交互
+
+## 后端API集成 (新增)
+- [x] 分析现有Python后端API结构
+- [x] 扩展api-client.ts,添加所有网络管理API调用
+- [x] 创建tRPC路由连接Python后端
+- [ ] 集成网络接口配置API
+- [ ] 集成无线网络管理API
+- [ ] 集成防火墙管理API
+- [ ] 集成QoS流控API
+- [ ] 集成多WAN负载均衡API
+- [ ] 集成VPN服务器API
+- [ ] 集成IPv6配置API
+- [ ] 集成DHCP/DNS服务API
+- [ ] 集成DDNS动态DNS API
+- [ ] 集成UPnP服务API
+- [ ] 集成流量统计API
+- [ ] 集成MAC地址管理API
+- [ ] 集成网络唤醒(WOL) API
+- [ ] 集成容器管理API
+- [ ] 集成虚拟机管理API
+- [ ] 集成硬件监控API
+- [ ] 集成系统监控API
+- [ ] 测试所有API集成功能
