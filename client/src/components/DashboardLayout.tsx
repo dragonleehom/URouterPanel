@@ -8,6 +8,8 @@ import {
   Activity,
   BarChart3,
   Box,
+  Gauge,
+  GitBranch,
   HardDrive,
   Home,
   Network,
@@ -15,6 +17,7 @@ import {
   Settings,
   Shield,
   Stethoscope,
+  Wifi,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -26,7 +29,10 @@ interface DashboardLayoutProps {
 const navItems = [
   { icon: Home, label: "仪表盘", path: "/" },
   { icon: Network, label: "网络管理", path: "/network" },
+  { icon: Wifi, label: "无线网络", path: "/wireless" },
   { icon: Shield, label: "防火墙", path: "/firewall" },
+  { icon: Gauge, label: "QoS流控", path: "/qos" },
+  { icon: GitBranch, label: "多WAN", path: "/multiwan" },
   { icon: Box, label: "容器管理", path: "/containers" },
   { icon: Server, label: "虚拟机", path: "/vms" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },

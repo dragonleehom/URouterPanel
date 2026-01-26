@@ -16,6 +16,9 @@ import FirewallManagement from "./pages/FirewallManagement";
 import DHCPDNSManagement from "./pages/DHCPDNSManagement";
 import SystemSettings from "./pages/SystemSettings";
 import NetworkDiagnosticsOptimized from "./pages/NetworkDiagnosticsOptimized";
+import WirelessManagement from "./pages/WirelessManagement";
+import QoSManagement from "./pages/QoSManagement";
+import MultiWANManagement from "./pages/MultiWANManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -34,6 +37,9 @@ function Router() {
         <Route path="/dhcp-dns" component={DHCPDNSManagement} />
         <Route path="/settings" component={SystemSettings} />
         <Route path="/diagnostics" component={NetworkDiagnosticsOptimized} />
+        <Route path="/wireless" component={WirelessManagement} />
+        <Route path="/qos" component={QoSManagement} />
+        <Route path="/multiwan" component={MultiWANManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
