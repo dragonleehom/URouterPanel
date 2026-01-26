@@ -15,6 +15,7 @@ import NetworkInterfaces from "./pages/NetworkInterfaces";
 import FirewallManagement from "./pages/FirewallManagement";
 import DHCPDNSManagement from "./pages/DHCPDNSManagement";
 import SystemSettings from "./pages/SystemSettings";
+import NetworkDiagnostics from "./pages/NetworkDiagnostics";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/firewall" component={FirewallManagement} />
         <Route path="/dhcp-dns" component={DHCPDNSManagement} />
         <Route path="/settings" component={SystemSettings} />
+        <Route path="/diagnostics" component={NetworkDiagnostics} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"

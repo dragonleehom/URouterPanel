@@ -14,6 +14,7 @@ import {
   Server,
   Settings,
   Shield,
+  Stethoscope,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const navItems = [
   { icon: Server, label: "虚拟机", path: "/vms" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },
   { icon: BarChart3, label: "系统监控", path: "/monitoring" },
+  { icon: Stethoscope, label: "网络诊断", path: "/diagnostics" },
   { icon: Activity, label: "系统状态", path: "/system" },
   { icon: Settings, label: "系统设置", path: "/settings" },
 ];
