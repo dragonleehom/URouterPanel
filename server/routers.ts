@@ -1,9 +1,16 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from "./api-client";
 import { z } from "zod";
+import {
+  executePing,
+  executeTraceroute,
+  executePortScan,
+  executeDNSQuery,
+  executeNslookup,
+} from "./diagnostics";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -133,6 +140,63 @@ export const appRouter = router({
       .input(z.object({ name: z.string() }))
       .mutation(async ({ input }) => {
         return await pythonAPI.deleteVM(input.name);
+      }),
+  }),
+
+  // 网络诊断工具API
+  diagnostics: router({
+    ping: protectedProcedure
+      .input(
+        z.object({
+          target: z.string(),
+          count: z.number().min(1).max(100).default(4),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await executePing(input.target, input.count);
+      }),
+
+    traceroute: protectedProcedure
+      .input(
+        z.object({
+          target: z.string(),
+          maxHops: z.number().min(1).max(64).default(30),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await executeTraceroute(input.target, input.maxHops);
+      }),
+
+    portScan: protectedProcedure
+      .input(
+        z.object({
+          target: z.string(),
+          ports: z.array(z.number()),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await executePortScan(input.target, input.ports);
+      }),
+
+    dnsQuery: protectedProcedure
+      .input(
+        z.object({
+          domain: z.string(),
+          type: z.string().default("A"),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await executeDNSQuery(input.domain, input.type);
+      }),
+
+    nslookup: protectedProcedure
+      .input(
+        z.object({
+          domain: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        return await executeNslookup(input.domain);
       }),
   }),
 

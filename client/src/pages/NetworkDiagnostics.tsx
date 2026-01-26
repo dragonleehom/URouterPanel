@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,9 @@ export default function NetworkDiagnostics() {
   const [dnsType, setDnsType] = useState("A");
   const [dnsResults, setDnsResults] = useState<string[]>([]);
 
+  // tRPC mutations
+  const pingMutation = trpc.diagnostics.ping.useMutation();
+
   // Ping工具函数
   const handlePing = async () => {
     if (!pingTarget) {
@@ -85,50 +89,28 @@ export default function NetworkDiagnostics() {
     setPingRunning(true);
     setPingResults([]);
     
-    // 模拟Ping结果
-    const count = parseInt(pingCount);
-    const results: PingResult[] = [];
-    let received = 0;
+    try {
+      const result = await pingMutation.mutateAsync({
+        target: pingTarget,
+        count: parseInt(pingCount),
+      });
 
-    for (let i = 0; i < count; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      const isSuccess = Math.random() > 0.1; // 90%成功率
-      const time = isSuccess ? Math.random() * 50 + 10 : 0;
-      const ttl = 64;
-
-      const result: PingResult = {
-        seq: i + 1,
-        time: parseFloat(time.toFixed(2)),
-        ttl,
-        status: isSuccess ? "success" : "timeout",
-      };
-
-      results.push(result);
-      if (isSuccess) received++;
-      setPingResults([...results]);
+      setPingResults(result.results);
+      setPingStats(result.stats);
+      toast.success("Ping测试完成");
+    } catch (error: any) {
+      toast.error(`Ping失败: ${error.message}`);
+    } finally {
+      setPingRunning(false);
     }
-
-    // 计算统计信息
-    const successResults = results.filter((r) => r.status === "success");
-    const times = successResults.map((r) => r.time);
-    setPingStats({
-      sent: count,
-      received,
-      lost: count - received,
-      min: Math.min(...times),
-      max: Math.max(...times),
-      avg: parseFloat((times.reduce((a, b) => a + b, 0) / times.length).toFixed(2)),
-    });
-
-    setPingRunning(false);
-    toast.success("Ping测试完成");
   };
 
   const handleStopPing = () => {
     setPingRunning(false);
     toast.info("Ping测试已停止");
   };
+
+  const tracerouteMutation = trpc.diagnostics.traceroute.useMutation();
 
   // Traceroute工具函数
   const handleTraceroute = async () => {
@@ -140,37 +122,27 @@ export default function NetworkDiagnostics() {
     setTraceRunning(true);
     setTraceResults([]);
 
-    // 模拟Traceroute结果
-    const maxHops = parseInt(traceMaxHops);
-    const results: TracerouteHop[] = [];
+    try {
+      const results = await tracerouteMutation.mutateAsync({
+        target: traceTarget,
+        maxHops: parseInt(traceMaxHops),
+      });
 
-    for (let i = 1; i <= Math.min(maxHops, 10); i++) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      const hop: TracerouteHop = {
-        hop: i,
-        ip: `192.168.${i}.1`,
-        hostname: i === 1 ? "gateway" : `hop${i}.example.com`,
-        time1: parseFloat((Math.random() * 20 + i * 5).toFixed(2)),
-        time2: parseFloat((Math.random() * 20 + i * 5).toFixed(2)),
-        time3: parseFloat((Math.random() * 20 + i * 5).toFixed(2)),
-      };
-
-      results.push(hop);
-      setTraceResults([...results]);
-
-      // 模拟到达目标
-      if (i === 8) break;
+      setTraceResults(results);
+      toast.success("Traceroute完成");
+    } catch (error: any) {
+      toast.error(`Traceroute失败: ${error.message}`);
+    } finally {
+      setTraceRunning(false);
     }
-
-    setTraceRunning(false);
-    toast.success("Traceroute完成");
   };
 
   const handleStopTraceroute = () => {
     setTraceRunning(false);
     toast.info("Traceroute已停止");
   };
+
+  const portScanMutation = trpc.diagnostics.portScan.useMutation();
 
   // 端口扫描工具函数
   const handlePortScan = async () => {
@@ -182,50 +154,31 @@ export default function NetworkDiagnostics() {
     setScanRunning(true);
     setScanResults([]);
 
-    // 解析端口列表
-    const ports = scanPorts.split(",").map((p) => parseInt(p.trim()));
-    const results: PortScanResult[] = [];
+    try {
+      // 解析端口列表
+      const ports = scanPorts.split(",").map((p) => parseInt(p.trim()));
+      
+      const results = await portScanMutation.mutateAsync({
+        target: scanTarget,
+        ports,
+      });
 
-    const serviceMap: Record<number, string> = {
-      21: "FTP",
-      22: "SSH",
-      23: "Telnet",
-      25: "SMTP",
-      80: "HTTP",
-      443: "HTTPS",
-      3306: "MySQL",
-      3389: "RDP",
-      8080: "HTTP-Alt",
-    };
-
-    for (const port of ports) {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      const random = Math.random();
-      let status: "open" | "closed" | "filtered";
-      if (random > 0.7) status = "open";
-      else if (random > 0.3) status = "closed";
-      else status = "filtered";
-
-      const result: PortScanResult = {
-        port,
-        protocol: "TCP",
-        status,
-        service: serviceMap[port] || "Unknown",
-      };
-
-      results.push(result);
-      setScanResults([...results]);
+      setScanResults(results);
+      toast.success("端口扫描完成");
+    } catch (error: any) {
+      toast.error(`端口扫描失败: ${error.message}`);
+    } finally {
+      setScanRunning(false);
     }
-
-    setScanRunning(false);
-    toast.success("端口扫描完成");
   };
 
   const handleStopPortScan = () => {
     setScanRunning(false);
     toast.info("端口扫描已停止");
   };
+
+  const dnsQueryMutation = trpc.diagnostics.dnsQuery.useMutation();
+  const nslookupMutation = trpc.diagnostics.nslookup.useMutation();
 
   // DNS查询工具函数
   const handleDNSQuery = async () => {
@@ -234,14 +187,16 @@ export default function NetworkDiagnostics() {
       return;
     }
 
-    // 模拟DNS查询结果
-    const mockResults = [
-      "93.184.216.34",
-      "2606:2800:220:1:248:1893:25c8:1946",
-    ];
+    try {
+      const results = await nslookupMutation.mutateAsync({
+        domain: dnsQuery,
+      });
 
-    setDnsResults(mockResults);
-    toast.success("DNS查询完成");
+      setDnsResults(results);
+      toast.success("DNS查询完成");
+    } catch (error: any) {
+      toast.error(`DNS查询失败: ${error.message}`);
+    }
   };
 
   const exportResults = (type: string, data: any) => {
