@@ -27,8 +27,6 @@ import {
   Plus,
   Settings,
   Trash2,
-  Play,
-  Square,
   RefreshCw,
   Wifi,
   Cable,
@@ -36,7 +34,9 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 // 接口类型定义
 type InterfaceProtocol = "static" | "dhcp" | "pppoe";
@@ -62,48 +62,47 @@ interface NetworkInterface {
   uptime: number;
 }
 
-// 模拟数据
-const mockInterfaces: NetworkInterface[] = [
-  {
-    id: "wan",
-    name: "WAN",
-    type: "wan",
-    protocol: "dhcp",
-    device: "eth0",
-    ipv4: "192.168.1.100",
-    netmask: "255.255.255.0",
-    gateway: "192.168.1.1",
-    dns: ["8.8.8.8", "8.8.4.4"],
-    mac: "00:11:22:33:44:55",
-    mtu: 1500,
-    enabled: true,
-    status: "up",
-    rxBytes: 1024 * 1024 * 500,
-    txBytes: 1024 * 1024 * 200,
-    uptime: 86400,
-  },
-  {
-    id: "lan",
-    name: "LAN",
-    type: "lan",
-    protocol: "static",
-    device: "br-lan",
-    ipv4: "192.168.50.1",
-    netmask: "255.255.255.0",
-    gateway: "",
-    dns: [],
-    mac: "00:11:22:33:44:66",
-    mtu: 1500,
-    enabled: true,
-    status: "up",
-    rxBytes: 1024 * 1024 * 300,
-    txBytes: 1024 * 1024 * 400,
-    uptime: 86400,
-  },
-];
+// 数据适配函数:将Python API返回的数据转换为前端格式
+function adaptInterfaceData(apiData: any): NetworkInterface {
+  return {
+    id: apiData.name || apiData.device,
+    name: apiData.name || apiData.device,
+    type: apiData.type || "lan",
+    protocol: apiData.protocol || "static",
+    device: apiData.device || apiData.name,
+    ipv4: apiData.ipv4 || apiData.ip || "",
+    netmask: apiData.netmask || apiData.mask || "255.255.255.0",
+    gateway: apiData.gateway || "",
+    dns: apiData.dns || [],
+    mac: apiData.mac || apiData.hwaddr || "00:00:00:00:00:00",
+    mtu: apiData.mtu || 1500,
+    enabled: apiData.state === "up" || apiData.enabled === true,
+    status: apiData.state === "up" ? "up" : apiData.state === "down" ? "down" : "error",
+    rxBytes: apiData.rx_bytes || apiData.rxBytes || 0,
+    txBytes: apiData.tx_bytes || apiData.txBytes || 0,
+    uptime: apiData.uptime || 0,
+  };
+}
 
 export default function NetworkInterfaces() {
-  const [interfaces, setInterfaces] = useState<NetworkInterface[]>(mockInterfaces);
+  const utils = trpc.useUtils();
+  
+  // 使用tRPC查询接口列表
+  const { data: interfacesData, isLoading, error, refetch } = trpc.networkInterfaces.list.useQuery(
+    undefined,
+    {
+      refetchInterval: 5000, // 每5秒自动刷新
+    }
+  );
+
+  // 处理错误
+  if (error) {
+    console.error("获取接口列表失败:", error);
+  }
+
+  // 适配接口数据
+  const interfaces: NetworkInterface[] = interfacesData?.interfaces?.map(adaptInterfaceData) || [];
+
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingInterface, setEditingInterface] = useState<NetworkInterface | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -121,33 +120,66 @@ export default function NetworkInterfaces() {
     mtu: 1500,
   });
 
-  const handleAddInterface = () => {
-    if (!newInterface.name || !newInterface.device) {
-      toast.error("请填写完整的接口信息");
-      return;
-    }
+  // 配置接口mutation
+  const configureMutation = trpc.networkInterfaces.configure.useMutation({
+    onSuccess: () => {
+      toast.success("接口配置成功");
+      utils.networkInterfaces.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`配置失败: ${error.message}`);
+    },
+  });
 
-    const newIface: NetworkInterface = {
-      id: Date.now().toString(),
-      name: newInterface.name,
-      type: newInterface.type,
-      protocol: newInterface.protocol,
-      device: newInterface.device,
-      ipv4: newInterface.ipv4,
-      netmask: newInterface.netmask,
-      gateway: newInterface.gateway,
-      dns: newInterface.dns.split(",").map((d) => d.trim()).filter(Boolean),
-      mac: "00:00:00:00:00:00",
-      mtu: newInterface.mtu,
-      enabled: true,
-      status: "down",
-      rxBytes: 0,
-      txBytes: 0,
-      uptime: 0,
-    };
+  // 启用接口mutation
+  const enableMutation = trpc.networkInterfaces.enable.useMutation({
+    onSuccess: (data, variables) => {
+      toast.success(`接口 ${variables.name} 已启用`);
+      utils.networkInterfaces.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`启用失败: ${error.message}`);
+    },
+  });
 
-    setInterfaces([...interfaces, newIface]);
-    setIsAddDialogOpen(false);
+  // 禁用接口mutation
+  const disableMutation = trpc.networkInterfaces.disable.useMutation({
+    onSuccess: (data, variables) => {
+      toast.success(`接口 ${variables.name} 已禁用`);
+      utils.networkInterfaces.list.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`禁用失败: ${error.message}`);
+    },
+  });
+
+  // 创建网桥mutation
+  const createBridgeMutation = trpc.networkInterfaces.createBridge.useMutation({
+    onSuccess: () => {
+      toast.success("网桥创建成功");
+      utils.networkInterfaces.list.invalidate();
+      setIsAddDialogOpen(false);
+      resetNewInterfaceForm();
+    },
+    onError: (error) => {
+      toast.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  // 创建VLAN mutation
+  const createVLANMutation = trpc.networkInterfaces.createVLAN.useMutation({
+    onSuccess: () => {
+      toast.success("VLAN创建成功");
+      utils.networkInterfaces.list.invalidate();
+      setIsAddDialogOpen(false);
+      resetNewInterfaceForm();
+    },
+    onError: (error) => {
+      toast.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  const resetNewInterfaceForm = () => {
     setNewInterface({
       name: "",
       type: "lan",
@@ -159,40 +191,67 @@ export default function NetworkInterfaces() {
       dns: "",
       mtu: 1500,
     });
-    toast.success("接口添加成功");
+  };
+
+  const handleAddInterface = () => {
+    if (!newInterface.name || !newInterface.device) {
+      toast.error("请填写完整的接口信息");
+      return;
+    }
+
+    // 根据接口类型调用不同的API
+    if (newInterface.type === "vlan") {
+      createVLANMutation.mutate({
+        name: newInterface.name,
+        device: newInterface.device,
+        vlan_id: 100, // 这里应该从表单获取
+      });
+    } else {
+      // 配置普通接口
+      configureMutation.mutate({
+        name: newInterface.device,
+        config: {
+          name: newInterface.name,
+          protocol: newInterface.protocol,
+          ipv4: newInterface.ipv4,
+          netmask: newInterface.netmask,
+          gateway: newInterface.gateway,
+          dns: newInterface.dns.split(",").map((d) => d.trim()).filter(Boolean),
+          mtu: newInterface.mtu,
+        },
+      });
+      setIsAddDialogOpen(false);
+      resetNewInterfaceForm();
+    }
   };
 
   const handleEditInterface = () => {
     if (!editingInterface) return;
 
-    setInterfaces(
-      interfaces.map((iface) =>
-        iface.id === editingInterface.id ? editingInterface : iface
-      )
-    );
+    configureMutation.mutate({
+      name: editingInterface.device,
+      config: {
+        ipv4: editingInterface.ipv4,
+        netmask: editingInterface.netmask,
+        gateway: editingInterface.gateway,
+        mtu: editingInterface.mtu,
+      },
+    });
     setIsEditDialogOpen(false);
     setEditingInterface(null);
-    toast.success("接口配置已更新");
   };
 
-  const handleDeleteInterface = (id: string) => {
-    setInterfaces(interfaces.filter((iface) => iface.id !== id));
-    toast.success("接口已删除");
+  const handleToggleInterface = (iface: NetworkInterface) => {
+    if (iface.enabled) {
+      disableMutation.mutate({ name: iface.device });
+    } else {
+      enableMutation.mutate({ name: iface.device });
+    }
   };
 
-  const handleToggleInterface = (id: string) => {
-    setInterfaces(
-      interfaces.map((iface) =>
-        iface.id === id
-          ? {
-              ...iface,
-              enabled: !iface.enabled,
-              status: !iface.enabled ? "up" : "down",
-            }
-          : iface
-      )
-    );
-    toast.success("接口状态已更新");
+  const handleRefresh = () => {
+    refetch();
+    toast.success("正在刷新接口列表...");
   };
 
   const getStatusIcon = (status: InterfaceStatus) => {
@@ -233,6 +292,31 @@ export default function NetworkInterfaces() {
     return `${days}天 ${hours}小时 ${minutes}分钟`;
   };
 
+  // 加载状态
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+        <span className="ml-2 text-gray-500">加载中...</span>
+      </div>
+    );
+  }
+
+  // 错误状态
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <p className="text-gray-700 mb-2">加载接口列表失败</p>
+        <p className="text-sm text-gray-500 mb-4">{error.message}</p>
+        <Button onClick={() => refetch()}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          重试
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
@@ -244,7 +328,7 @@ export default function NetworkInterfaces() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleRefresh}>
             <RefreshCw className="w-4 h-4 mr-2" />
             刷新
           </Button>
@@ -256,114 +340,125 @@ export default function NetworkInterfaces() {
       </div>
 
       {/* 接口列表 */}
-      <div className="grid gap-4">
-        {interfaces.map((iface) => (
-          <Card key={iface.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  {getTypeIcon(iface.type)}
-                  <div>
-                    <CardTitle className="text-lg">{iface.name}</CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {iface.device}
-                      </Badge>
-                      <Badge
-                        variant={iface.type === "wan" ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {iface.type.toUpperCase()}
-                      </Badge>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(iface.status)}
-                        <span className="text-xs text-gray-500">
-                          {iface.status === "up" ? "运行中" : "已停止"}
-                        </span>
+      {interfaces.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Network className="w-12 h-12 text-gray-400 mb-4" />
+            <p className="text-gray-500">暂无网络接口</p>
+            <Button
+              size="sm"
+              className="mt-4"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              添加第一个接口
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4">
+          {interfaces.map((iface) => (
+            <Card key={iface.id}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {getTypeIcon(iface.type)}
+                    <div>
+                      <CardTitle className="text-lg">{iface.name}</CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">
+                          {iface.device}
+                        </Badge>
+                        <Badge
+                          variant={iface.type === "wan" ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {iface.type.toUpperCase()}
+                        </Badge>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(iface.status)}
+                          <span className="text-xs text-gray-500">
+                            {iface.status === "up" ? "运行中" : "已停止"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={iface.enabled}
+                      onCheckedChange={() => handleToggleInterface(iface)}
+                      disabled={enableMutation.isPending || disableMutation.isPending}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingInterface(iface);
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      <Settings className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={iface.enabled}
-                    onCheckedChange={() => handleToggleInterface(iface.id)}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setEditingInterface(iface);
-                      setIsEditDialogOpen(true);
-                    }}
-                  >
-                    <Settings className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteInterface(iface.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">协议</p>
+                    <p className="text-sm font-medium mt-1">
+                      {iface.protocol.toUpperCase()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">IPv4地址</p>
+                    <p className="text-sm font-medium mt-1">{iface.ipv4 || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">子网掩码</p>
+                    <p className="text-sm font-medium mt-1">{iface.netmask || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">网关</p>
+                    <p className="text-sm font-medium mt-1">
+                      {iface.gateway || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">MAC地址</p>
+                    <p className="text-sm font-medium mt-1">{iface.mac}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">MTU</p>
+                    <p className="text-sm font-medium mt-1">{iface.mtu}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">接收/发送</p>
+                    <p className="text-sm font-medium mt-1">
+                      {formatBytes(iface.rxBytes)} / {formatBytes(iface.txBytes)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">运行时间</p>
+                    <p className="text-sm font-medium mt-1">
+                      {iface.uptime > 0 ? formatUptime(iface.uptime) : "-"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500">协议</p>
-                  <p className="text-sm font-medium mt-1">
-                    {iface.protocol.toUpperCase()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">IPv4地址</p>
-                  <p className="text-sm font-medium mt-1">{iface.ipv4}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">子网掩码</p>
-                  <p className="text-sm font-medium mt-1">{iface.netmask}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">网关</p>
-                  <p className="text-sm font-medium mt-1">
-                    {iface.gateway || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">MAC地址</p>
-                  <p className="text-sm font-medium mt-1">{iface.mac}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">MTU</p>
-                  <p className="text-sm font-medium mt-1">{iface.mtu}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">接收/发送</p>
-                  <p className="text-sm font-medium mt-1">
-                    {formatBytes(iface.rxBytes)} / {formatBytes(iface.txBytes)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">运行时间</p>
-                  <p className="text-sm font-medium mt-1">
-                    {formatUptime(iface.uptime)}
-                  </p>
-                </div>
-              </div>
-              {iface.dns.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-500">DNS服务器</p>
-                  <p className="text-sm font-medium mt-1">
-                    {iface.dns.join(", ")}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                {iface.dns.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-500">DNS服务器</p>
+                    <p className="text-sm font-medium mt-1">
+                      {iface.dns.join(", ")}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* 添加接口对话框 */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -546,7 +641,15 @@ export default function NetworkInterfaces() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleAddInterface}>添加</Button>
+            <Button 
+              onClick={handleAddInterface}
+              disabled={configureMutation.isPending || createVLANMutation.isPending}
+            >
+              {(configureMutation.isPending || createVLANMutation.isPending) && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              添加
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -625,7 +728,15 @@ export default function NetworkInterfaces() {
               >
                 取消
               </Button>
-              <Button onClick={handleEditInterface}>保存</Button>
+              <Button 
+                onClick={handleEditInterface}
+                disabled={configureMutation.isPending}
+              >
+                {configureMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                保存
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

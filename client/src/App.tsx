@@ -39,7 +39,7 @@ function Router() {
         <Route path="/compose" component={ComposeManagement} />
         <Route path="/monitoring" component={Monitoring} />
         <Route path="/dashboard-builder" component={DashboardBuilder} />
-        <Route path="/network/interfaces" component={NetworkInterfaces} />
+        <Route path="/network-interfaces" component={NetworkInterfaces} />
         <Route path="/firewall" component={FirewallManagement} />
         <Route path="/dhcp-dns" component={DHCPDNSManagement} />
         <Route path="/settings" component={SystemSettings} />
