@@ -171,3 +171,15 @@
 - [x] 创建更新和重启脚本(update.sh)
 - [x] 创建README部署文档
 - [ ] 在Ubuntu VM上测试部署脚本
+
+## CI/CD流程 (新增)
+- [x] 创建GitHub Actions工作流文件
+- [x] 配置前端自动化测试
+- [x] 配置后端自动化测试
+- [x] 配置自动构建
+- [x] 配置自动部署到测试服务器
+- [x] 编写CI/CD文档
+- [x] 创建CI/CD安装说明
+- [ ] 手动添加workflow文件到GitHub
+- [ ] 配置GitHub Secrets
+- [ ] 测试完整CI/CD流程
