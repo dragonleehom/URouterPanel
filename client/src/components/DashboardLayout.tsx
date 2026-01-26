@@ -13,6 +13,7 @@ import {
   Network,
   Server,
   Settings,
+  Shield,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ interface DashboardLayoutProps {
 const navItems = [
   { icon: Home, label: "仪表盘", path: "/" },
   { icon: Network, label: "网络管理", path: "/network" },
+  { icon: Shield, label: "防火墙", path: "/firewall" },
   { icon: Box, label: "容器管理", path: "/containers" },
   { icon: Server, label: "虚拟机", path: "/vms" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },

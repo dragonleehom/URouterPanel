@@ -12,6 +12,7 @@ import ComposeManagement from "./pages/ComposeManagement";
 import Monitoring from "./pages/Monitoring";
 import DashboardBuilder from "./pages/DashboardBuilder";
 import NetworkInterfaces from "./pages/NetworkInterfaces";
+import FirewallManagement from "./pages/FirewallManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/monitoring" component={Monitoring} />
         <Route path="/dashboard-builder" component={DashboardBuilder} />
         <Route path="/network/interfaces" component={NetworkInterfaces} />
+        <Route path="/firewall" component={FirewallManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
