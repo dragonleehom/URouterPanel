@@ -96,8 +96,16 @@
 - [x] 实现无线网络管理(WiFi 2.4GHz/5GHz配置)
 - [x] 实现QoS流量控制(带宽限制和优先级)
 - [x] 实现多WAN负载均衡(故障切换)
-- [ ] 实现VPN服务器(OpenVPN/WireGuard)
-- [ ] 实现IPv6完整支持
+- [x] 实现VPN服务器(OpenVPN/WireGuard)
+  - [x] OpenVPN服务器配置页面
+  - [x] WireGuard服务器配置页面
+  - [x] 证书管理和客户端配置生成
+  - [x] 客户端连接状态监控
+- [x] 实现IPv6完整支持
+  - [x] IPv6地址配置页面
+  - [x] IPv6防火墙规则
+  - [x] DHCPv6服务配置
+  - [x] IPv6路由通告(RA)
 
 ### 阶段二: 增强功能(中优先级)
 - [ ] 实现动态DNS(DDNS)配置

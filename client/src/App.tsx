@@ -19,6 +19,8 @@ import NetworkDiagnosticsOptimized from "./pages/NetworkDiagnosticsOptimized";
 import WirelessManagement from "./pages/WirelessManagement";
 import QoSManagement from "./pages/QoSManagement";
 import MultiWANManagement from "./pages/MultiWANManagement";
+import VPNManagement from "./pages/VPNManagement";
+import IPv6Management from "./pages/IPv6Management";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -40,6 +42,8 @@ function Router() {
         <Route path="/wireless" component={WirelessManagement} />
         <Route path="/qos" component={QoSManagement} />
         <Route path="/multiwan" component={MultiWANManagement} />
+        <Route path="/vpn" component={VPNManagement} />
+        <Route path="/ipv6" component={IPv6Management} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
