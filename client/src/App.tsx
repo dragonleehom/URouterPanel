@@ -21,6 +21,8 @@ import QoSManagement from "./pages/QoSManagement";
 import MultiWANManagement from "./pages/MultiWANManagement";
 import VPNManagement from "./pages/VPNManagement";
 import IPv6Management from "./pages/IPv6Management";
+import DDNSManagement from "./pages/DDNSManagement";
+import UPnPManagement from "./pages/UPnPManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -44,6 +46,8 @@ function Router() {
         <Route path="/multiwan" component={MultiWANManagement} />
         <Route path="/vpn" component={VPNManagement} />
         <Route path="/ipv6" component={IPv6Management} />
+        <Route path="/ddns" component={DDNSManagement} />
+        <Route path="/upnp" component={UPnPManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
