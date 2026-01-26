@@ -4,34 +4,61 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import DashboardLayout from "./components/DashboardLayout";
+import Dashboard from "./pages/Dashboard";
+import NetworkManagement from "./pages/NetworkManagement";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <DashboardLayout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/network" component={NetworkManagement} />
+        <Route path="/containers">
+          <PlaceholderPage
+            title="容器管理"
+            description="管理Docker容器、镜像、网络和卷"
+          />
+        </Route>
+        <Route path="/vms">
+          <PlaceholderPage
+            title="虚拟机管理"
+            description="管理KVM虚拟机、存储池和网络"
+          />
+        </Route>
+        <Route path="/hardware">
+          <PlaceholderPage
+            title="硬件监控"
+            description="监控CPU、内存、磁盘、网卡、GPU等硬件资源"
+          />
+        </Route>
+        <Route path="/system">
+          <PlaceholderPage
+            title="系统状态"
+            description="查看系统信息、进程列表、日志等"
+          />
+        </Route>
+        <Route path="/settings">
+          <PlaceholderPage
+            title="系统设置"
+            description="配置系统参数、用户管理、备份恢复等"
+          />
+        </Route>
+        <Route path="/404" component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+    </DashboardLayout>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
-          <Toaster />
+          <Toaster position="top-right" />
           <Router />
         </TooltipProvider>
       </ThemeProvider>
