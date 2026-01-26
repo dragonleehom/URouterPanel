@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import NetworkManagement from "./pages/NetworkManagement";
+import ContainerManagement from "./pages/ContainerManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 
@@ -16,12 +17,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/network" component={NetworkManagement} />
-        <Route path="/containers">
-          <PlaceholderPage
-            title="容器管理"
-            description="管理Docker容器、镜像、网络和卷"
-          />
-        </Route>
+        <Route path="/containers" component={ContainerManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
