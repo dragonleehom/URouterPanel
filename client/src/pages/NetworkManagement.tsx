@@ -449,11 +449,20 @@ export default function NetworkManagement() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* DHCP/DNS */}
-        <TabsContent value="dhcp" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        </TabsContent>        {/* DHCP/DNS */}
+        <TabsContent value="dhcp-dns" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>DHCP/DNS服务</CardTitle>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/dhcp-dns">
+                    进入DHCP/DNS管理
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+          </Card>         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>DHCP服务</CardTitle>
