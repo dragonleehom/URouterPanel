@@ -161,3 +161,13 @@
 - [ ] 更新虚拟机管理页面调用真实API
 - [ ] 更新硬件监控页面调用真实API
 - [ ] 测试所有API集成功能
+
+## GitHub仓库和部署脚本 (新增)
+- [x] 创建GitHub仓库URouterPanel
+- [x] 上传前端代码到仓库
+- [x] 上传Python后端代码到仓库
+- [x] 创建一键式部署脚本(deploy.sh)
+- [x] 创建systemd服务配置文件
+- [x] 创建更新和重启脚本(update.sh)
+- [x] 创建README部署文档
+- [ ] 在Ubuntu VM上测试部署脚本
