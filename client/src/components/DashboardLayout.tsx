@@ -6,8 +6,10 @@
 import { ReactNode, useState } from "react";
 import {
   Activity,
+  BarChart2,
   BarChart3,
   Box,
+  CircleDot,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -55,6 +57,9 @@ const menuItems: MenuItem[] = [
       { icon: Network, label: "DHCP/DNS", path: "/dhcp-dns" },
       { icon: RefreshCw, label: "DDNS动态DNS", path: "/ddns" },
       { icon: ExternalLink, label: "UPnP服务", path: "/upnp" },
+      { icon: BarChart2, label: "流量统计", path: "/traffic" },
+      { icon: CircleDot, label: "MAC地址", path: "/mac" },
+      { icon: CircleDot, label: "网络唤醒", path: "/wol" },
       { icon: Stethoscope, label: "网络诊断", path: "/diagnostics" },
     ],
   },

@@ -23,6 +23,9 @@ import VPNManagement from "./pages/VPNManagement";
 import IPv6Management from "./pages/IPv6Management";
 import DDNSManagement from "./pages/DDNSManagement";
 import UPnPManagement from "./pages/UPnPManagement";
+import TrafficStatistics from "./pages/TrafficStatistics";
+import MACManagement from "./pages/MACManagement";
+import WOLManagement from "./pages/WOLManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -48,6 +51,9 @@ function Router() {
         <Route path="/ipv6" component={IPv6Management} />
         <Route path="/ddns" component={DDNSManagement} />
         <Route path="/upnp" component={UPnPManagement} />
+        <Route path="/traffic" component={TrafficStatistics} />
+        <Route path="/mac" component={MACManagement} />
+        <Route path="/wol" component={WOLManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
