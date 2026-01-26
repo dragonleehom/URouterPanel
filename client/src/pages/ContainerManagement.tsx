@@ -21,7 +21,9 @@ import {
   Network,
   Download,
   Upload,
+  Layers,
 } from "lucide-react";
+import { Link } from "wouter";
 import { toast } from "sonner";
 import {
   BarChart,
@@ -150,6 +152,14 @@ export default function ContainerManagement() {
           <TabsTrigger value="stats">
             <Activity className="w-4 h-4 mr-2" />
             资源统计
+          </TabsTrigger>
+          <TabsTrigger value="compose" asChild>
+            <Link href="/compose">
+              <a className="flex items-center">
+                <Layers className="w-4 h-4 mr-2" />
+                Compose
+              </a>
+            </Link>
           </TabsTrigger>
         </TabsList>
 

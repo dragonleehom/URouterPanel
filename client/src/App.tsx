@@ -8,6 +8,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import NetworkManagement from "./pages/NetworkManagement";
 import ContainerManagement from "./pages/ContainerManagement";
+import ComposeManagement from "./pages/ComposeManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/network" component={NetworkManagement} />
         <Route path="/containers" component={ContainerManagement} />
+        <Route path="/compose" component={ComposeManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"
