@@ -12,7 +12,8 @@ import ComposeManagement from "./pages/ComposeManagement";
 import Monitoring from "./pages/Monitoring";
 import DashboardBuilder from "./pages/DashboardBuilder";
 import NetworkInterfaces from "./pages/NetworkInterfaces";
-import FirewallManagement from "./pages/FirewallManagement";
+import FirewallManagement from "@/pages/FirewallManagement";
+import FirewallExample from "@/pages/FirewallExample";
 import DHCPDNSManagement from "./pages/DHCPDNSManagement";
 import SystemSettings from "./pages/SystemSettings";
 import NetworkDiagnosticsOptimized from "./pages/NetworkDiagnosticsOptimized";
@@ -41,6 +42,7 @@ function Router() {
         <Route path="/dashboard-builder" component={DashboardBuilder} />
         <Route path="/network-interfaces" component={NetworkInterfaces} />
         <Route path="/firewall" component={FirewallManagement} />
+        <Route path="/firewall-example" component={FirewallExample} />
         <Route path="/dhcp-dns" component={DHCPDNSManagement} />
         <Route path="/settings" component={SystemSettings} />
         <Route path="/diagnostics" component={NetworkDiagnosticsOptimized} />

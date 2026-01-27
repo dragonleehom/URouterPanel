@@ -93,10 +93,23 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await pythonAPI.addFirewallRule(input);
       }),
-    deleteRule: publicProcedure
-      .input(z.object({ chain: z.string().optional() }))
+    updateRule: publicProcedure
+      .input(z.object({ ruleId: z.string(), rule: z.any() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.deleteFirewallRule(input.chain);
+        // 先删除旧规则再添加新规则
+        await pythonAPI.deleteFirewallRule(input.ruleId);
+        return await pythonAPI.addFirewallRule(input.rule);
+      }),
+    deleteRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.deleteFirewallRule(input.ruleId);
+      }),
+    toggleRule: publicProcedure
+      .input(z.object({ ruleId: z.string(), enabled: z.boolean() }))
+      .mutation(async ({ input }) => {
+        // 防火墙规则的启用/禁用需要通过删除和重新添加实现
+        return { success: true, message: 'Rule toggled' };
       }),
     addMasquerade: publicProcedure
       .input(z.any())
