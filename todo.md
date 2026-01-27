@@ -246,3 +246,11 @@
   - [ ] 启动/停止容器
   - [ ] 创建/删除容器
   - [ ] 查看容器日志
+
+## 部署脚本修复 (紧急)
+- [x] 修夏deploy.sh中的Python包管理错误(externally-managed-environment)
+- [x] 使用Python虚拟环境替代系统级pip安装
+- [x] 更新systemd服务配置使用虚拟环境
+- [x] 更新.gitignore忽略虚拟环境目录
+- [x] 更新GitHub仓库
+- [ ] 在Ubuntu VM上测试修复后的部署脚本
