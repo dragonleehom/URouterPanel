@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,12 +34,17 @@ import {
   Loader2,
   Play,
   Square,
+  Download,
+  Upload,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 // ==================== 全局配置标签页 ====================
 function GlobalConfigTab() {
   const { data: globalConfig, isLoading } = trpc.networkConfig.getGlobalConfig.useQuery();
+  const { data: allPorts } = trpc.networkConfig.listPorts.useQuery();
+  const { data: allDevices } = trpc.networkConfig.listDevices.useQuery();
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const updateGlobalConfig = trpc.networkConfig.updateGlobalConfig.useMutation({
     onSuccess: () => {
       toast.success("全局配置已更新");
@@ -85,6 +90,53 @@ function GlobalConfigTab() {
       rpsEnabled: rpsEnabled ? 1 : 0,
       rpsCpus: rpsCpus || undefined,
     });
+  };
+
+  const handleExportConfig = () => {
+    try {
+      const config = {
+        version: "1.0",
+        exportTime: new Date().toISOString(),
+        globalConfig: globalConfig,
+        ports: allPorts || [],
+        devices: allDevices || [],
+      };
+
+      // 创建下载
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `urouteros-config-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("配置已导出");
+    } catch (error: any) {
+      toast.error(`导出失败: ${error.message}`);
+    }
+  };
+
+  const handleImportConfig = async (file: File) => {
+    try {
+      const text = await file.text();
+      const config = JSON.parse(text);
+
+      // 验证配置格式
+      if (!config.version || !config.globalConfig) {
+        throw new Error("无效的配置文件格式");
+      }
+
+      // TODO: 导入配置到数据库
+      toast.success("配置导入功能开发中...");
+    } catch (error: any) {
+      toast.error(`导入失败: ${error.message}`);
+    }
+  };
+
+  const handleApplyTemplate = (template: any) => {
+    // TODO: 应用模板配置到数据库
+    toast.success(`已选择模板: ${template.name},功能开发中...`);
   };
 
   if (isLoading) {
@@ -165,27 +217,70 @@ function GlobalConfigTab() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2">
-        <Button 
-          variant="outline"
-          onClick={() => {
-            applyAllConfigs.mutate();
-          }} 
-          disabled={applyAllConfigs.isPending}
-        >
-          {applyAllConfigs.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          <Play className="mr-2 h-4 w-4" />
-          应用所有配置
-        </Button>
-        <Button onClick={handleSave} disabled={updateGlobalConfig.isPending}>
-          {updateGlobalConfig.isPending && (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          )}
-          保存配置
-        </Button>
+      <div className="flex justify-between">
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setIsTemplateDialogOpen(true)}
+          >
+            <Network className="mr-2 h-4 w-4" />
+            应用模板
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={handleExportConfig}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            导出配置
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = '.json';
+              input.onchange = (e: any) => {
+                const file = e.target.files[0];
+                if (file) {
+                  handleImportConfig(file);
+                }
+              };
+              input.click();
+            }}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            导入配置
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => {
+              applyAllConfigs.mutate();
+            }} 
+            disabled={applyAllConfigs.isPending}
+          >
+            {applyAllConfigs.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            <Play className="mr-2 h-4 w-4" />
+            应用所有配置
+          </Button>
+          <Button onClick={handleSave} disabled={updateGlobalConfig.isPending}>
+            {updateGlobalConfig.isPending && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            保存配置
+          </Button>
+        </div>
       </div>
+
+      {/* 配置模板对话框 */}
+      <ConfigTemplateDialog
+        open={isTemplateDialogOpen}
+        onOpenChange={setIsTemplateDialogOpen}
+        onApplyTemplate={handleApplyTemplate}
+      />
     </div>
   );
 }
@@ -710,16 +805,384 @@ function PortConfigTab() {
 
 // ==================== 接口配置标签页 ====================
 function InterfaceConfigTab() {
-  // TODO: 实现接口配置功能
+  const { data: ports, isLoading } = trpc.networkConfig.listPorts.useQuery();
+  const [editingInterface, setEditingInterface] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const utils = trpc.useUtils();
+  const updatePort = trpc.networkConfig.updatePort.useMutation({
+    onSuccess: () => {
+      toast.success("接口配置已更新");
+      utils.networkConfig.listPorts.invalidate();
+      setIsDialogOpen(false);
+      setEditingInterface(null);
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
+
+  const restartPort = trpc.networkConfig.restartPort.useMutation({
+    onSuccess: () => {
+      toast.success("接口已重启");
+      utils.networkConfig.listPorts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`重启失败: ${error.message}`);
+    },
+  });
+
+  const stopPort = trpc.networkConfig.stopPort.useMutation({
+    onSuccess: () => {
+      toast.success("接口已停止");
+      utils.networkConfig.listPorts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`停止失败: ${error.message}`);
+    },
+  });
+
+  const handleEditInterface = (port: any) => {
+    setEditingInterface(port);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveInterface = () => {
+    if (!editingInterface) return;
+    const { id, ...updates } = editingInterface;
+    updatePort.mutate({ id, ...updates });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>接口配置</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">接口配置功能开发中...</p>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>接口列表</CardTitle>
+          <CardDescription>
+            查看和管理所有网络接口的协议配置
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {ports && ports.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              暂无接口配置,请在"网口配置"标签页添加WAN/LAN口
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {ports?.map((port) => (
+                <Card key={port.id}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-lg">{port.name}</h3>
+                          <Badge variant={port.type === "wan" ? "default" : "secondary"}>
+                            {port.type === "wan" ? "WAN" : "LAN"}
+                          </Badge>
+                          <Badge variant="outline">{port.protocol.toUpperCase()}</Badge>
+                          <Badge variant={port.enabled ? "default" : "secondary"}>
+                            {port.enabled ? "已启用" : "已禁用"}
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">物理接口: </span>
+                            <span className="font-mono">{port.ifname || "-"}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">协议: </span>
+                            <span>{port.protocol.toUpperCase()}</span>
+                          </div>
+                          {port.protocol === "static" && (
+                            <>
+                              <div>
+                                <span className="text-muted-foreground">IPv4地址: </span>
+                                <span className="font-mono">{port.ipaddr || "-"}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">子网掩码: </span>
+                                <span className="font-mono">{port.netmask || "-"}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">网关: </span>
+                                <span className="font-mono">{port.gateway || "-"}</span>
+                              </div>
+                            </>
+                          )}
+                          {port.dns && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">DNS服务器: </span>
+                              <span className="font-mono">{port.dns}</span>
+                            </div>
+                          )}
+                          {port.ipv6 === 1 && (
+                            <>
+                              <div>
+                                <span className="text-muted-foreground">IPv6地址: </span>
+                                <span className="font-mono">{port.ipv6addr || "-"}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">IPv6网关: </span>
+                                <span className="font-mono">{port.ipv6gateway || "-"}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex gap-4 text-sm pt-2 border-t">
+                          {port.mtu && (
+                            <div>
+                              <span className="text-muted-foreground">MTU: </span>
+                              <span>{port.mtu}</span>
+                            </div>
+                          )}
+                          {port.metric && (
+                            <div>
+                              <span className="text-muted-foreground">Metric: </span>
+                              <span>{port.metric}</span>
+                            </div>
+                          )}
+                          {port.firewallZone && (
+                            <div>
+                              <span className="text-muted-foreground">防火墙区域: </span>
+                              <span>{port.firewallZone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditInterface(port)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => restartPort.mutate({ id: port.id })}
+                          disabled={restartPort.isPending || !port.enabled}
+                        >
+                          {restartPort.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => stopPort.mutate({ id: port.id })}
+                          disabled={stopPort.isPending || !port.enabled}
+                        >
+                          {stopPort.isPending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 编辑对话框 */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>接口配置 - {editingInterface?.name}</DialogTitle>
+            <DialogDescription>
+              配置接口的协议参数
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingInterface && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="interface-protocol">协议类型</Label>
+                <select
+                  id="interface-protocol"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={editingInterface.protocol}
+                  onChange={(e) =>
+                    setEditingInterface({
+                      ...editingInterface,
+                      protocol: e.target.value,
+                    })
+                  }
+                >
+                  <option value="static">静态IP</option>
+                  <option value="dhcp">DHCP</option>
+                  <option value="pppoe">PPPoE</option>
+                </select>
+              </div>
+
+              {editingInterface.protocol === "static" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="interface-ipaddr">IPv4地址</Label>
+                      <Input
+                        id="interface-ipaddr"
+                        value={editingInterface.ipaddr || ""}
+                        onChange={(e) =>
+                          setEditingInterface({
+                            ...editingInterface,
+                            ipaddr: e.target.value,
+                          })
+                        }
+                        placeholder="192.168.1.1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="interface-netmask">子网掩码</Label>
+                      <Input
+                        id="interface-netmask"
+                        value={editingInterface.netmask || ""}
+                        onChange={(e) =>
+                          setEditingInterface({
+                            ...editingInterface,
+                            netmask: e.target.value,
+                          })
+                        }
+                        placeholder="255.255.255.0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="interface-gateway">网关</Label>
+                    <Input
+                      id="interface-gateway"
+                      value={editingInterface.gateway || ""}
+                      onChange={(e) =>
+                        setEditingInterface({
+                          ...editingInterface,
+                          gateway: e.target.value,
+                        })
+                      }
+                      placeholder="192.168.1.254"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="interface-dns">DNS服务器</Label>
+                <Input
+                  id="interface-dns"
+                  value={editingInterface.dns || ""}
+                  onChange={(e) =>
+                    setEditingInterface({
+                      ...editingInterface,
+                      dns: e.target.value,
+                    })
+                  }
+                  placeholder="8.8.8.8 8.8.4.4"
+                />
+                <p className="text-sm text-muted-foreground">
+                  多个DNS服务器用空格分隔
+                </p>
+              </div>
+
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>启用IPv6</Label>
+                    <p className="text-sm text-muted-foreground">
+                      允许此接口使用IPv6
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingInterface.ipv6 === 1}
+                    onCheckedChange={(checked) =>
+                      setEditingInterface({
+                        ...editingInterface,
+                        ipv6: checked ? 1 : 0,
+                      })
+                    }
+                  />
+                </div>
+
+                {editingInterface.ipv6 === 1 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="interface-ipv6addr">IPv6地址</Label>
+                      <Input
+                        id="interface-ipv6addr"
+                        value={editingInterface.ipv6addr || ""}
+                        onChange={(e) =>
+                          setEditingInterface({
+                            ...editingInterface,
+                            ipv6addr: e.target.value,
+                          })
+                        }
+                        placeholder="2001:db8::1/64"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="interface-ipv6gateway">IPv6网关</Label>
+                      <Input
+                        id="interface-ipv6gateway"
+                        value={editingInterface.ipv6gateway || ""}
+                        onChange={(e) =>
+                          setEditingInterface({
+                            ...editingInterface,
+                            ipv6gateway: e.target.value,
+                          })
+                        }
+                        placeholder="2001:db8::254"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-4">
+                <Label>启用此接口</Label>
+                <Switch
+                  checked={editingInterface.enabled === 1}
+                  onCheckedChange={(checked) =>
+                    setEditingInterface({
+                      ...editingInterface,
+                      enabled: checked ? 1 : 0,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleSaveInterface} disabled={updatePort.isPending}>
+              {updatePort.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -1178,5 +1641,222 @@ export default function NetworkInterfaces() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+
+// ==================== 配置模板对话框 ====================
+const NETWORK_TEMPLATES = {
+  home_router: {
+    name: "家庭路由器",
+    description: "适合家庭使用的标准路由器配置,1个WAN口(DHCP)+ 1个LAN口(静态IP + DHCP服务器)",
+    config: {
+      globalConfig: {
+        ipv6UlaPrefix: "fd00::/48",
+        packetSteering: 1,
+        rpsEnabled: 0,
+      },
+      ports: [
+        {
+          name: "WAN",
+          type: "wan",
+          protocol: "dhcp",
+          ifname: "eth0",
+          enabled: 1,
+          mtu: 1500,
+          firewallZone: "wan",
+        },
+        {
+          name: "LAN",
+          type: "lan",
+          protocol: "static",
+          ifname: "eth1",
+          ipaddr: "192.168.1.1",
+          netmask: "255.255.255.0",
+          dhcpServer: 1,
+          dhcpStart: "192.168.1.100",
+          dhcpEnd: "192.168.1.200",
+          dhcpLeaseTime: "12h",
+          enabled: 1,
+          mtu: 1500,
+          firewallZone: "lan",
+        },
+      ],
+    },
+  },
+  enterprise_gateway: {
+    name: "企业网关",
+    description: "企业级网关配置,多WAN负载均衡 + 多LAN网段隔离",
+    config: {
+      globalConfig: {
+        ipv6UlaPrefix: "fd00::/48",
+        packetSteering: 1,
+        rpsEnabled: 1,
+        rpsCpus: "f",
+      },
+      ports: [
+        {
+          name: "WAN1",
+          type: "wan",
+          protocol: "static",
+          ifname: "eth0",
+          ipaddr: "10.0.0.2",
+          netmask: "255.255.255.0",
+          gateway: "10.0.0.1",
+          dns: "8.8.8.8 8.8.4.4",
+          enabled: 1,
+          mtu: 1500,
+          metric: 10,
+          firewallZone: "wan",
+        },
+        {
+          name: "WAN2",
+          type: "wan",
+          protocol: "dhcp",
+          ifname: "eth1",
+          enabled: 1,
+          mtu: 1500,
+          metric: 20,
+          firewallZone: "wan",
+        },
+        {
+          name: "LAN_OFFICE",
+          type: "lan",
+          protocol: "static",
+          ifname: "eth2",
+          ipaddr: "192.168.10.1",
+          netmask: "255.255.255.0",
+          dhcpServer: 1,
+          dhcpStart: "192.168.10.100",
+          dhcpEnd: "192.168.10.200",
+          dhcpLeaseTime: "24h",
+          enabled: 1,
+          firewallZone: "lan",
+        },
+        {
+          name: "LAN_GUEST",
+          type: "lan",
+          protocol: "static",
+          ifname: "eth3",
+          ipaddr: "192.168.20.1",
+          netmask: "255.255.255.0",
+          dhcpServer: 1,
+          dhcpStart: "192.168.20.100",
+          dhcpEnd: "192.168.20.200",
+          dhcpLeaseTime: "2h",
+          enabled: 1,
+          firewallZone: "guest",
+        },
+      ],
+    },
+  },
+  transparent_bridge: {
+    name: "透明网桥",
+    description: "二层透明网桥配置,将多个物理接口桥接为一个逻辑接口",
+    config: {
+      globalConfig: {
+        ipv6UlaPrefix: "",
+        packetSteering: 0,
+        rpsEnabled: 0,
+      },
+      ports: [
+        {
+          name: "BR_LAN",
+          type: "lan",
+          protocol: "static",
+          ifname: "br-lan",
+          ipaddr: "192.168.1.1",
+          netmask: "255.255.255.0",
+          dhcpServer: 1,
+          dhcpStart: "192.168.1.100",
+          dhcpEnd: "192.168.1.200",
+          dhcpLeaseTime: "12h",
+          enabled: 1,
+          firewallZone: "lan",
+        },
+      ],
+    },
+  },
+};
+
+function ConfigTemplateDialog({
+  open,
+  onOpenChange,
+  onApplyTemplate,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onApplyTemplate: (template: any) => void;
+}) {
+  const [selectedTemplate, setSelectedTemplate] = useState<keyof typeof NETWORK_TEMPLATES | null>(null);
+
+  const handleApply = () => {
+    if (!selectedTemplate) {
+      toast.error("请选择一个配置模板");
+      return;
+    }
+    onApplyTemplate(NETWORK_TEMPLATES[selectedTemplate]);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>选择配置模板</DialogTitle>
+          <DialogDescription>
+            选择一个预设模板快速配置网络
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {Object.entries(NETWORK_TEMPLATES).map(([key, template]) => (
+            <Card
+              key={key}
+              className={`cursor-pointer transition-colors ${
+                selectedTemplate === key ? "border-primary bg-primary/5" : ""
+              }`}
+              onClick={() => setSelectedTemplate(key as keyof typeof NETWORK_TEMPLATES)}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {template.description}
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">包含配置:</p>
+                      <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+                        <li>全局配置: IPv6 ULA={template.config.globalConfig.ipv6UlaPrefix || "未设置"}, 包转向={template.config.globalConfig.packetSteering ? "启用" : "禁用"}</li>
+                        <li>网口配置: {template.config.ports.length}个网口</li>
+                        {template.config.ports.map((port, idx) => (
+                          <li key={idx} className="ml-4">
+                            {port.name} ({port.type.toUpperCase()}, {port.protocol.toUpperCase()})
+                            {port.protocol === "static" && ` - ${port.ipaddr}`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                  {selectedTemplate === key && (
+                    <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            取消
+          </Button>
+          <Button onClick={handleApply} disabled={!selectedTemplate}>
+            应用模板
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
