@@ -1,0 +1,2 @@
+ALTER TABLE `installed_apps` MODIFY COLUMN `status` enum('running','stopped','error','installing','failed') DEFAULT 'installing';--> statement-breakpoint
+ALTER TABLE `installed_apps` ADD `containerId` varchar(200);

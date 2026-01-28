@@ -10,6 +10,8 @@ import { appStoreApps, appStoreVersions, installedApps } from "../drizzle/schema
 import { eq, like, or, and, desc } from "drizzle-orm";
 import { getDb } from "./db";
 import { syncAllApps } from "./appStoreSyncService";
+import { parseDockerCompose, serviceToDockerodeConfig } from "./dockerComposeParser";
+import { pullImage, createContainer, startContainer } from "./dockerService";
 
 export const appStoreRouter = router({
   /**
@@ -229,12 +231,85 @@ export const appStoreRouter = router({
         installPath: `/opt/urouteros/apps/${containerName}`,
       });
 
-      // TODO: 实现Docker Compose部署
-      // 1. 解析docker-compose.yml模板
-      // 2. 替换环境变量
-      // 3. 创建数据目录
-      // 4. 执行docker-compose up -d
-      // 5. 更新安装状态
+      // 实现Docker Compose部署
+      try {
+        const dockerComposeYaml = version[0].dockerCompose;
+        if (!dockerComposeYaml) {
+          throw new Error("应用版本缺少docker-compose.yml配置");
+        }
+
+        // 1. 解析docker-compose.yml
+        const parsed = parseDockerCompose(dockerComposeYaml);
+        if (parsed.services.length === 0) {
+          throw new Error("docker-compose.yml中没有定义服务");
+        }
+
+        // 只处理第一个服务(大多数1Panel应用只有一个主服务)
+        const mainService = parsed.services[0];
+
+        // 2. 合并用户配置的环境变量
+        if (input.config?.environment) {
+          Object.assign(mainService.environment, input.config.environment);
+        }
+
+        // 3. 合并用户配置的端口映射
+        if (input.config?.ports) {
+          mainService.ports = input.config.ports.map((p: any) => ({
+            host: p.host || p.hostPort,
+            container: p.container || p.containerPort,
+            protocol: p.protocol || "tcp",
+          }));
+        }
+
+        // 4. 设置容器名称
+        mainService.containerName = containerName;
+
+        // 5. 拉取镜像
+        console.log(`Pulling image: ${mainService.image}`);
+        await pullImage(mainService.image);
+
+        // 6. 创建容器
+        const containerConfig = serviceToDockerodeConfig(mainService);
+        console.log(`Creating container: ${containerName}`);
+        const container = await createContainer(containerConfig);
+
+        // 7. 启动容器
+        console.log(`Starting container: ${containerName}`);
+        await startContainer(container.id);
+
+        // 8. 更新安装状态
+        await db
+          .update(installedApps)
+          .set({
+            status: "running",
+            containerId: container.id,
+            portMappings: JSON.stringify(
+              mainService.ports.map((p) => ({
+                host: p.host,
+                container: p.container,
+                protocol: p.protocol || "tcp",
+              }))
+            ),
+          })
+          .where(eq(installedApps.containerName, containerName));
+
+        console.log(`✓ Application ${input.appKey} installed successfully`);
+      } catch (error) {
+        console.error(`Failed to install ${input.appKey}:`, error);
+        
+        // 更新安装状态为失败
+        await db
+          .update(installedApps)
+          .set({
+            status: "failed",
+          })
+          .where(eq(installedApps.containerName, containerName));
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `应用安装失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
 
       // 更新安装次数
       const currentInstallCount = app[0].installCount ?? 0;
@@ -290,12 +365,39 @@ export const appStoreRouter = router({
         });
       }
 
-      // TODO: 实现Docker Compose清理
-      // 1. 执行docker-compose down
-      // 2. 删除数据目录(可选)
-      // 3. 删除安装记录
+      // 实现Docker Compose清理
+      try {
+        const containerId = app[0].containerId;
+        if (containerId) {
+          // 1. 停止并删除容器
+          const { stopContainer, removeContainer } = await import("./dockerService");
+          
+          try {
+            await stopContainer(containerId);
+            console.log(`Stopped container: ${containerId}`);
+          } catch (error) {
+            console.warn(`Failed to stop container: ${error}`);
+          }
 
-      await db.delete(installedApps).where(eq(installedApps.id, input.installedId));
+          try {
+            await removeContainer(containerId);
+            console.log(`Removed container: ${containerId}`);
+          } catch (error) {
+            console.warn(`Failed to remove container: ${error}`);
+          }
+        }
+
+        // 2. 删除安装记录
+        await db.delete(installedApps).where(eq(installedApps.id, input.installedId));
+
+        console.log(`✓ Application ${app[0].appKey} uninstalled successfully`);
+      } catch (error) {
+        console.error(`Failed to uninstall application:`, error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `应用卸载失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
 
       return {
         message: "应用已卸载",
@@ -341,22 +443,53 @@ export const appStoreRouter = router({
         });
       }
 
-      // TODO: 实现Docker Compose控制
-      // 1. 根据action执行对应的docker-compose命令
-      // 2. 更新应用状态
+      // 实现Docker Compose控制
+      try {
+        const containerId = app[0].containerId;
+        if (!containerId) {
+          throw new Error("应用未关联到容器");
+        }
 
-      const statusMap = {
-        start: "running" as const,
-        stop: "stopped" as const,
-        restart: "running" as const,
-      };
+        const { startContainer, stopContainer, restartContainer } = await import("./dockerService");
 
-      await db
-        .update(installedApps)
-        .set({
-          status: statusMap[input.action],
-        })
-        .where(eq(installedApps.id, input.installedId));
+        // 1. 执行对应的Docker操作
+        switch (input.action) {
+          case "start":
+            await startContainer(containerId);
+            console.log(`Started container: ${containerId}`);
+            break;
+          case "stop":
+            await stopContainer(containerId);
+            console.log(`Stopped container: ${containerId}`);
+            break;
+          case "restart":
+            await restartContainer(containerId);
+            console.log(`Restarted container: ${containerId}`);
+            break;
+        }
+
+        // 2. 更新应用状态
+        const statusMap = {
+          start: "running" as const,
+          stop: "stopped" as const,
+          restart: "running" as const,
+        };
+
+        await db
+          .update(installedApps)
+          .set({
+            status: statusMap[input.action],
+          })
+          .where(eq(installedApps.id, input.installedId));
+
+        console.log(`✓ Application ${app[0].appKey} ${input.action} successfully`);
+      } catch (error) {
+        console.error(`Failed to ${input.action} application:`, error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `应用操作失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
 
       return {
         message: `应用${input.action === "start" ? "已启动" : input.action === "stop" ? "已停止" : "已重启"}`,

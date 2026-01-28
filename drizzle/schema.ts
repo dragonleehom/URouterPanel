@@ -79,7 +79,8 @@ export const installedApps = mysqlTable("installed_apps", {
   appKey: varchar("appKey", { length: 100 }).notNull(),
   version: varchar("version", { length: 50 }).notNull(),
   containerName: varchar("containerName", { length: 200 }).notNull().unique(),
-  status: mysqlEnum("status", ["running", "stopped", "error", "installing"]).default("installing"),
+  containerId: varchar("containerId", { length: 200 }),
+  status: mysqlEnum("status", ["running", "stopped", "error", "installing", "failed"]).default("installing"),
   portMappings: text("portMappings"), // JSON字符串
   envConfig: text("envConfig"), // JSON字符串
   installPath: varchar("installPath", { length: 500 }),

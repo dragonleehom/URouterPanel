@@ -15,6 +15,13 @@
       "when": 1769599354223,
       "tag": "0001_wise_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1769601868124,
+      "tag": "0002_breezy_valkyrie",
+      "breakpoints": true
     }
   ]
 }
