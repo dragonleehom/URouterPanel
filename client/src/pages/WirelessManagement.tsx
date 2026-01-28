@@ -28,9 +28,16 @@ export default function WirelessManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
+  // 检测无线硬件支持
+  const { data: capability, isLoading: capabilityLoading } = 
+    trpc.wireless.checkCapability.useQuery();
+
   // 获取无线接口列表
   const { data: interfaces, isLoading: interfacesLoading, refetch: refetchInterfaces } = 
-    trpc.wireless.getInterfaces.useQuery();
+    trpc.wireless.getInterfaces.useQuery(
+      undefined,
+      { enabled: capability?.hasWirelessHardware === true }
+    );
 
   // 获取WiFi配置
   const { data: config, isLoading: configLoading, refetch: refetchConfig } = 
@@ -41,7 +48,7 @@ export default function WirelessManagement() {
     trpc.wireless.getStatus.useQuery();
 
   // 获取客户端列表(使用第一个接口)
-  const firstInterface = interfaces?.[0]?.name || "wlan0";
+  const firstInterface = interfaces?.[0]?.interface || "wlan0";
   const { data: clients, refetch: refetchClients } = 
     trpc.wireless.getClients.useQuery(
       { iface: firstInterface },
@@ -225,7 +232,68 @@ export default function WirelessManagement() {
         </div>
       </div>
 
+      {/* 硬件检测提示 */}
+      {capabilityLoading && (
+        <Card className="p-6 bg-blue-50 border-blue-200">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="w-5 h-5 text-blue-600 animate-spin" />
+            <p className="text-blue-900">正在检测无线硬件...</p>
+          </div>
+        </Card>
+      )}
+
+      {!capabilityLoading && capability && !capability.hasWirelessHardware && (
+        <Card className="p-6 bg-yellow-50 border-yellow-200">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Wifi className="w-6 h-6 text-yellow-600" />
+              <h3 className="text-lg font-semibold text-yellow-900">未检测到无线网卡</h3>
+            </div>
+            <p className="text-yellow-800 whitespace-pre-line">{capability.message}</p>
+            <div className="mt-4 p-4 bg-white rounded-md border border-yellow-200">
+              <p className="text-sm font-medium text-gray-900 mb-2">解决方案:</p>
+              <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                <li>检查硬件是否正确安装并连接</li>
+                <li>确认无线网卡驱动已加载: <code className="bg-gray-100 px-1 rounded">lsmod | grep -i wifi</code></li>
+                <li>尝试安装驱动: <code className="bg-gray-100 px-1 rounded">sudo apt install linux-firmware</code></li>
+                <li>考虑使用USB无线网卡</li>
+              </ul>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!capabilityLoading && capability && capability.hasWirelessHardware && capability.devices.length > 0 && (
+        <Card className="p-6 bg-green-50 border-green-200">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Wifi className="w-6 h-6 text-green-600" />
+              <h3 className="text-lg font-semibold text-green-900">检测到无线硬件</h3>
+            </div>
+            <p className="text-green-800">{capability.message}</p>
+            <div className="mt-4 space-y-2">
+              {capability.devices.map((device, index) => (
+                <div key={index} className="p-3 bg-white rounded-md border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{device.interface}</p>
+                      <p className="text-sm text-gray-600">驱动: {device.driver} | 芯片: {device.chipset}</p>
+                    </div>
+                    {device.supported ? (
+                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已支持</span>
+                    ) : (
+                      <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">需配置</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* 状态卡片 */}
+      {capability?.hasWirelessHardware && (
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
@@ -259,7 +327,9 @@ export default function WirelessManagement() {
           </div>
         </Card>
       </div>
+      )}
 
+      {capability?.hasWirelessHardware && (
       <Tabs defaultValue="config" className="space-y-4">
         <TabsList>
           <TabsTrigger value="config">WiFi配置</TabsTrigger>
@@ -371,6 +441,7 @@ export default function WirelessManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+      )}
 
       {/* 配置对话框 */}
       <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>

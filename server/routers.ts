@@ -12,6 +12,7 @@ import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo 
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from './api-client';
 import * as networkInterfaceService from './services/networkInterfaceService';
+import * as wirelessService from './services/wirelessService';
 import { z } from "zod";
 import {
   executePing,
@@ -283,8 +284,17 @@ export const appRouter = router({
 
   // ==================== 无线网络管理路由 ====================
   wireless: router({
+    /**
+     * 检测无线硬件支持
+     */
+    checkCapability: publicProcedure.query(async () => {
+      return await wirelessService.checkWirelessCapability();
+    }),
+    /**
+     * 获取无线接口列表
+     */
     getInterfaces: publicProcedure.query(async () => {
-      return await pythonAPI.getWirelessInterfaces();
+      return await wirelessService.getWirelessInterfaces();
     }),
     getInterfaceInfo: publicProcedure
       .input(z.object({ iface: z.string() }))
