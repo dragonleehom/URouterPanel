@@ -184,13 +184,19 @@ export const appRouter = router({
 
   // ==================== DHCP/DNS管理路由 ====================
   dhcpDns: router({
-    configureDHCP: publicProcedure
+    getConfig: publicProcedure.query(async () => {
+      return await pythonAPI.getDHCPConfig();
+    }),
+    configure: publicProcedure
       .input(z.any())
       .mutation(async ({ input }) => {
         return await pythonAPI.configureDHCP(input);
       }),
     getLeases: publicProcedure.query(async () => {
       return await pythonAPI.getDHCPLeases();
+    }),
+    getStaticLeases: publicProcedure.query(async () => {
+      return await pythonAPI.getStaticLeases();
     }),
     addStaticLease: publicProcedure
       .input(z.any())
@@ -202,35 +208,17 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await pythonAPI.deleteStaticLease(input.mac);
       }),
-    configureDNS: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.configureDNS(input);
-      }),
-    getDNSRecords: publicProcedure.query(async () => {
-      return await pythonAPI.getDNSRecords();
+    getStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getDHCPDNSStatus();
     }),
-    addDNSRecord: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.addDNSRecord(input);
-      }),
-    deleteDNSRecord: publicProcedure
-      .input(z.object({ hostname: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.deleteDNSRecord(input.hostname);
-      }),
-    getDNSStatus: publicProcedure.query(async () => {
-      return await pythonAPI.getDNSStatus();
+    start: publicProcedure.mutation(async () => {
+      return await pythonAPI.startDHCPDNS();
     }),
-    startDNS: publicProcedure.mutation(async () => {
-      return await pythonAPI.startDNSService();
+    stop: publicProcedure.mutation(async () => {
+      return await pythonAPI.stopDHCPDNS();
     }),
-    stopDNS: publicProcedure.mutation(async () => {
-      return await pythonAPI.stopDNSService();
-    }),
-    restartDNS: publicProcedure.mutation(async () => {
-      return await pythonAPI.restartDNSService();
+    restart: publicProcedure.mutation(async () => {
+      return await pythonAPI.restartDHCPDNS();
     }),
   }),
 

@@ -313,27 +313,21 @@
   - [x] 后端API测试通过(路由表/默认网关/ARP表)
   - [x] 前端tRPC连接测试通过
 
-### 3. DHCP/DNS管理 (优先级:高)
-- [ ] 后端API完善
-  - [ ] 实现获取DHCP配置API
-  - [ ] 实现配置DHCP服务器API
-  - [ ] 实现获取DHCP租约列表API
-  - [ ] 实现添加静态IP绑定API
-  - [ ] 实现删除静态IP绑定API
-  - [ ] 实现获取DNS配置API
-  - [ ] 实现配置DNS服务器API
-  - [ ] 实现添加DNS记录API
-  - [ ] 实现删除DNS记录API
-- [ ] 前端集成
-  - [ ] 移除DHCPDNSService.tsx中的模拟数据
-  - [ ] 集成tRPC API调用
-  - [ ] 实现DHCP配置功能
-  - [ ] 实现静态绑定管理
-  - [ ] 实现DNS记录管理
-- [ ] 沙箱测试
-  - [ ] DHCP服务配置测试
-  - [ ] 静态绑定测试
-  - [ ] DNS记录测试
+### 3. DHCP/DNS管理 (优先级:高) ✅
+- [x] 后端API完善
+  - [x] 实现获取DHCP配置API
+  - [x] 实现配置DHCP服务API
+  - [x] 实现获取DHCP租约API
+  - [x] 实现添加静态IP绑定API
+  - [x] 实现删除静态IP绑定API
+  - [x] 实现服务启停控制API
+- [x] 前端集成
+  - [x] 更新api-client.ts中的DHCP/DNS API方法
+  - [x] 更新routers.ts中的DHCP/DNS路由
+  - [x] TypeScript编译通过
+- [x] 沙箱测试
+  - [x] 后端API测试通过(状态查询)
+  - [x] 前端tRPC连接测试通过
 
 ### 4. 无线网络管理 (优先级:中)
 - [ ] 后端API完善

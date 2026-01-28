@@ -306,10 +306,18 @@ class PythonAPIClient {
   // ==================== DHCP/DNS管理 API ====================
 
   /**
+   * 获取DHCP配置
+   */
+  async getDHCPConfig() {
+    const response = await this.client.get('/api/dhcp-dns/config');
+    return response.data;
+  }
+
+  /**
    * 配置DHCP服务
    */
   async configureDHCP(config: any) {
-    const response = await this.client.post('/api/network/dhcp/configure', config);
+    const response = await this.client.post('/api/dhcp-dns/config', config);
     return response.data;
   }
 
@@ -317,97 +325,67 @@ class PythonAPIClient {
    * 获取DHCP租约列表
    */
   async getDHCPLeases() {
-    const response = await this.client.get('/api/network/dhcp/leases');
+    const response = await this.client.get('/api/dhcp-dns/leases');
     return response.data;
   }
 
   /**
-   * 添加静态租约
+   * 获取静态IP绑定列表
+   */
+  async getStaticLeases() {
+    const response = await this.client.get('/api/dhcp-dns/static-leases');
+    return response.data;
+  }
+
+  /**
+   * 添加静态IP绑定
    */
   async addStaticLease(lease: any) {
-    const response = await this.client.post('/api/network/dhcp/static-leases', lease);
+    const response = await this.client.post('/api/dhcp-dns/static-leases', lease);
     return response.data;
   }
 
   /**
-   * 删除静态租约
+   * 删除静态IP绑定
    */
   async deleteStaticLease(mac: string) {
-    const response = await this.client.delete(`/api/network/dhcp/static-leases/${mac}`);
+    const response = await this.client.delete(`/api/dhcp-dns/static-leases/${mac}`);
     return response.data;
   }
 
   /**
-   * 配置DNS服务
+   * 获取DHCP/DNS服务状态
    */
-  async configureDNS(config: any) {
-    const response = await this.client.post('/api/network/dns/configure', config);
+  async getDHCPDNSStatus() {
+    const response = await this.client.get('/api/dhcp-dns/status');
     return response.data;
   }
 
   /**
-   * 获取DNS记录列表
+   * 启动DHCP/DNS服务
    */
-  async getDNSRecords() {
-    const response = await this.client.get('/api/network/dns/records');
+  async startDHCPDNS() {
+    const response = await this.client.post('/api/dhcp-dns/start');
     return response.data;
   }
 
   /**
-   * 添加DNS记录
+   * 停止DHCP/DNS服务
    */
-  async addDNSRecord(record: any) {
-    const response = await this.client.post('/api/network/dns/records', record);
+  async stopDHCPDNS() {
+    const response = await this.client.post('/api/dhcp-dns/stop');
     return response.data;
   }
 
   /**
-   * 删除DNS记录
+   * 重启DHCP/DNS服务
    */
-  async deleteDNSRecord(hostname: string) {
-    const response = await this.client.delete(`/api/network/dns/records/${hostname}`);
+  async restartDHCPDNS() {
+    const response = await this.client.post('/api/dhcp-dns/restart');
     return response.data;
   }
 
-  /**
-   * 获取DNS服务状态
-   */
-  async getDNSStatus() {
-    const response = await this.client.get('/api/network/dns/status');
-    return response.data;
-  }
 
-  /**
-   * 启动DNS服务
-   */
-  async startDNSService() {
-    const response = await this.client.post('/api/network/dns/start');
-    return response.data;
-  }
-
-  /**
-   * 停止DNS服务
-   */
-  async stopDNSService() {
-    const response = await this.client.post('/api/network/dns/stop');
-    return response.data;
-  }
-
-  /**
-   * 重启DNS服务
-   */
-  async restartDNSService() {
-    const response = await this.client.post('/api/network/dns/restart');
-    return response.data;
-  }
-
-  /**
-   * 获取DHCP配置(兼容旧接口)
-   */
-  async getDHCPConfig() {
-    const response = await this.client.get('/api/network/dhcp/config');
-    return response.data;
-  }
 
   /**
    * 更新DHCP配置(兼容旧接口)
