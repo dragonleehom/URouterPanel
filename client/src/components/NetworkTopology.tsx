@@ -3,7 +3,7 @@
  * 使用React Flow展示网络和容器的关系图
  */
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -20,6 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Network, Box } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import NodeDetailPanel from "./NodeDetailPanel";
 
 // 自定义网络节点组件
 const NetworkNode = ({ data }: { data: any }) => {
@@ -70,10 +71,10 @@ const nodeTypes = {
 };
 
 export default function NetworkTopology() {
-  const { data: topologyData, isLoading, error, refetch } = trpc.network.topology.useQuery();
-
+  const { data: topologyData, isLoading } = trpc.network.topology.useQuery();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNode, setSelectedNode] = useState<any>(null);
 
   // 自动布局算法 - 将网络节点排列在左侧,容器节点排列在右侧
   const layoutNodes = useCallback((topologyNodes: any[], topologyEdges: any[]) => {
@@ -153,22 +154,6 @@ export default function NetworkTopology() {
     );
   }
 
-  if (error) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>网络拓扑图</CardTitle>
-          <CardDescription>可视化展示Docker网络和容器的连接关系</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[600px] flex items-center justify-center text-destructive">
-            加载失败: {error.message}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (!topologyData || (topologyData.nodes.length === 0 && topologyData.edges.length === 0)) {
     return (
       <Card>
@@ -185,9 +170,14 @@ export default function NetworkTopology() {
     );
   }
 
+  const onNodeClick = useCallback((_: any, node: Node) => {
+    setSelectedNode(node);
+  }, []);
+
   return (
-    <Card>
-      <CardHeader>
+    <div className="relative">
+      <Card>
+        <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>网络拓扑图</CardTitle>
@@ -196,11 +186,11 @@ export default function NetworkTopology() {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <Network className="w-4 h-4 text-blue-600" />
-              <span>{topologyData.nodes.filter((n) => n.type === "network").length} 个网络</span>
+              <span>{topologyData.nodes.filter((n: any) => n.type === "network").length} 个网络</span>
             </div>
             <div className="flex items-center gap-2">
               <Box className="w-4 h-4 text-green-600" />
-              <span>{topologyData.nodes.filter((n) => n.type === "container").length} 个容器</span>
+              <span>{topologyData.nodes.filter((n: any) => n.type === "container").length} 个容器</span>
             </div>
           </div>
         </div>
@@ -213,6 +203,7 @@ export default function NetworkTopology() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
+            onNodeClick={onNodeClick}
             fitView
             attributionPosition="bottom-left"
           >
@@ -232,5 +223,14 @@ export default function NetworkTopology() {
         </div>
       </CardContent>
     </Card>
+    
+    {/* 节点详情面板 */}
+    {selectedNode && (
+      <NodeDetailPanel
+        node={selectedNode}
+        onClose={() => setSelectedNode(null)}
+      />
+    )}
+  </div>
   );
 }
