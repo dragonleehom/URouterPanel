@@ -28,742 +28,937 @@ import {
   Settings,
   Trash2,
   RefreshCw,
-  Wifi,
-  Cable,
   Globe,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Loader2,
+  Play,
+  Square,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
-// 接口类型定义
-type InterfaceProtocol = "static" | "dhcp" | "pppoe";
-type InterfaceType = "wan" | "lan" | "guest" | "vlan";
-type InterfaceStatus = "up" | "down" | "error";
+// ==================== 全局配置标签页 ====================
+function GlobalConfigTab() {
+  const { data: globalConfig, isLoading } = trpc.networkConfig.getGlobalConfig.useQuery();
+  const updateGlobalConfig = trpc.networkConfig.updateGlobalConfig.useMutation({
+    onSuccess: () => {
+      toast.success("全局配置已更新");
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
 
-interface NetworkInterface {
-  id: string;
-  name: string;
-  type: InterfaceType;
-  protocol: InterfaceProtocol;
-  device: string;
-  ipv4: string;
-  netmask: string;
-  gateway: string;
-  ipv6?: string;
-  dns: string[];
-  mac: string;
-  mtu: number;
-  enabled: boolean;
-  status: InterfaceStatus;
-  rxBytes: number;
-  txBytes: number;
-  uptime: number;
-}
+  const [ipv6UlaPrefix, setIpv6UlaPrefix] = useState("");
+  const [packetSteering, setPacketSteering] = useState(false);
+  const [rpsEnabled, setRpsEnabled] = useState(false);
+  const [rpsCpus, setRpsCpus] = useState("");
 
-// 数据适配函数:将Python API返回的数据转换为前端格式
-function adaptInterfaceData(apiData: any): NetworkInterface {
-  return {
-    id: apiData.name || apiData.device,
-    name: apiData.name || apiData.device,
-    type: apiData.type || "lan",
-    protocol: apiData.protocol || "static",
-    device: apiData.device || apiData.name,
-    ipv4: apiData.ipv4 || apiData.ip || "",
-    netmask: apiData.netmask || apiData.mask || "255.255.255.0",
-    gateway: apiData.gateway || "",
-    dns: apiData.dns || [],
-    mac: apiData.mac || apiData.hwaddr || "00:00:00:00:00:00",
-    mtu: apiData.mtu || 1500,
-    enabled: apiData.state === "up" || apiData.enabled === true,
-    status: apiData.state === "up" ? "up" : apiData.state === "down" ? "down" : "error",
-    rxBytes: apiData.rx_bytes || apiData.rxBytes || 0,
-    txBytes: apiData.tx_bytes || apiData.txBytes || 0,
-    uptime: apiData.uptime || 0,
-  };
-}
-
-export default function NetworkInterfaces() {
-  const utils = trpc.useUtils();
-  
-  // 使用tRPC查询接口列表
-  const { data: interfacesData, isLoading, error, refetch } = trpc.networkInterfaces.list.useQuery(
-    undefined,
-    {
-      refetchInterval: 5000, // 每5秒自动刷新
+  // 当数据加载完成时,更新表单状态
+  useState(() => {
+    if (globalConfig) {
+      setIpv6UlaPrefix(globalConfig.ipv6UlaPrefix || "");
+      setPacketSteering(globalConfig.packetSteering === 1);
+      setRpsEnabled(globalConfig.rpsEnabled === 1);
+      setRpsCpus(globalConfig.rpsCpus || "");
     }
-  );
-
-  // 查询物理接口列表(用于下拉选择)
-  const { data: physicalInterfacesData } = trpc.networkInterfaces.listPhysical.useQuery(
-    undefined,
-    {
-      refetchInterval: 10000, // 每10秒刷新
-    }
-  );
-
-  // 处理错误
-  if (error) {
-    console.error("获取接口列表失败:", error);
-  }
-
-  // 适配接口数据
-  const interfaces: NetworkInterface[] = interfacesData?.map(adaptInterfaceData) || [];
-
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingInterface, setEditingInterface] = useState<NetworkInterface | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-
-  // 新建接口表单
-  const [newInterface, setNewInterface] = useState({
-    name: "",
-    type: "lan" as InterfaceType,
-    protocol: "static" as InterfaceProtocol,
-    device: "",
-    ipv4: "",
-    netmask: "255.255.255.0",
-    gateway: "",
-    dns: "",
-    mtu: 1500,
   });
 
-  // 配置接口mutation
-  const configureMutation = trpc.networkInterfaces.configure.useMutation({
-    onSuccess: () => {
-      toast.success("接口配置成功");
-      utils.networkInterfaces.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error(`配置失败: ${error.message}`);
-    },
-  });
-
-  // 启用接口mutation
-  const enableMutation = trpc.networkInterfaces.enable.useMutation({
-    onSuccess: (data, variables) => {
-      toast.success(`接口 ${variables.name} 已启用`);
-      utils.networkInterfaces.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error(`启用失败: ${error.message}`);
-    },
-  });
-
-  // 禁用接口mutation
-  const disableMutation = trpc.networkInterfaces.disable.useMutation({
-    onSuccess: (data, variables) => {
-      toast.success(`接口 ${variables.name} 已禁用`);
-      utils.networkInterfaces.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error(`禁用失败: ${error.message}`);
-    },
-  });
-
-  // 创建网桥mutation
-  const createBridgeMutation = trpc.networkInterfaces.createBridge.useMutation({
-    onSuccess: () => {
-      toast.success("网桥创建成功");
-      utils.networkInterfaces.list.invalidate();
-      setIsAddDialogOpen(false);
-      resetNewInterfaceForm();
-    },
-    onError: (error) => {
-      toast.error(`创建失败: ${error.message}`);
-    },
-  });
-
-  // 创建VLAN mutation
-  const createVLANMutation = trpc.networkInterfaces.createVLAN.useMutation({
-    onSuccess: () => {
-      toast.success("VLAN创建成功");
-      utils.networkInterfaces.list.invalidate();
-      setIsAddDialogOpen(false);
-      resetNewInterfaceForm();
-    },
-    onError: (error) => {
-      toast.error(`创建失败: ${error.message}`);
-    },
-  });
-
-  const resetNewInterfaceForm = () => {
-    setNewInterface({
-      name: "",
-      type: "lan",
-      protocol: "static",
-      device: "",
-      ipv4: "",
-      netmask: "255.255.255.0",
-      gateway: "",
-      dns: "",
-      mtu: 1500,
+  const handleSave = () => {
+    updateGlobalConfig.mutate({
+      ipv6UlaPrefix: ipv6UlaPrefix || undefined,
+      packetSteering: packetSteering ? 1 : 0,
+      rpsEnabled: rpsEnabled ? 1 : 0,
+      rpsCpus: rpsCpus || undefined,
     });
   };
 
-  const handleAddInterface = () => {
-    if (!newInterface.name || !newInterface.device) {
-      toast.error("请填写完整的接口信息");
-      return;
-    }
-
-    // 根据接口类型调用不同的API
-    if (newInterface.type === "vlan") {
-      createVLANMutation.mutate({
-        name: newInterface.name,
-        device: newInterface.device,
-        vlan_id: 100, // 这里应该从表单获取
-      });
-    } else {
-      // 配置普通接口
-      configureMutation.mutate({
-        name: newInterface.device,
-        ipv4: newInterface.ipv4,
-        netmask: newInterface.netmask,
-        gateway: newInterface.gateway,
-        mtu: newInterface.mtu,
-      });
-      setIsAddDialogOpen(false);
-      resetNewInterfaceForm();
-    }
-  };
-
-  const handleEditInterface = async () => {
-    if (!editingInterface) return;
-
-    try {
-      await configureMutation.mutateAsync({
-        name: editingInterface.name,
-        ipv4: editingInterface.ipv4,
-        netmask: editingInterface.netmask,
-        gateway: editingInterface.gateway,
-        ipv6: editingInterface.ipv6,
-        mtu: editingInterface.mtu,
-      });
-      toast.success("接口配置成功");
-      setIsEditDialogOpen(false);
-      refetch();
-    } catch (error) {
-      toast.error("配置失败: " + (error instanceof Error ? error.message : String(error)));
-    }
-  };
-
-  const handleToggleInterface = (iface: NetworkInterface) => {
-    if (iface.enabled) {
-      disableMutation.mutate({ name: iface.device });
-    } else {
-      enableMutation.mutate({ name: iface.device });
-    }
-  };
-
-  const handleRefresh = () => {
-    refetch();
-    toast.success("正在刷新接口列表...");
-  };
-
-  const getStatusIcon = (status: InterfaceStatus) => {
-    switch (status) {
-      case "up":
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case "down":
-        return <XCircle className="w-4 h-4 text-gray-400" />;
-      case "error":
-        return <AlertCircle className="w-4 h-4 text-red-600" />;
-    }
-  };
-
-  const getTypeIcon = (type: InterfaceType) => {
-    switch (type) {
-      case "wan":
-        return <Globe className="w-4 h-4" />;
-      case "lan":
-        return <Cable className="w-4 h-4" />;
-      case "guest":
-        return <Wifi className="w-4 h-4" />;
-      default:
-        return <Network className="w-4 h-4" />;
-    }
-  };
-
-  const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-    return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
-  };
-
-  const formatUptime = (seconds: number) => {
-    const days = Math.floor(seconds / 86400);
-    const hours = Math.floor((seconds % 86400) / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${days}天 ${hours}小时 ${minutes}分钟`;
-  };
-
-  // 加载状态
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-        <span className="ml-2 text-gray-500">加载中...</span>
-      </div>
-    );
-  }
-
-  // 错误状态
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64">
-        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-        <p className="text-gray-700 mb-2">加载接口列表失败</p>
-        <p className="text-sm text-gray-500 mb-4">{error.message}</p>
-        <Button onClick={() => refetch()}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          重试
-        </Button>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">网络接口</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            管理WAN、LAN、VLAN等网络接口配置
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            刷新
-          </Button>
-          <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            添加接口
-          </Button>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>IPv6 配置</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="ipv6-ula">IPv6 ULA 前缀</Label>
+            <Input
+              id="ipv6-ula"
+              placeholder="例如: fd00::/48"
+              value={ipv6UlaPrefix}
+              onChange={(e) => setIpv6UlaPrefix(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              用于本地IPv6网络的唯一本地地址(ULA)前缀
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* 接口列表 */}
-      {interfaces.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Network className="w-12 h-12 text-gray-400 mb-4" />
-            <p className="text-gray-500">暂无网络接口</p>
-            <Button
-              size="sm"
-              className="mt-4"
-              onClick={() => setIsAddDialogOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              添加第一个接口
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4">
-          {interfaces.map((iface) => (
-            <Card key={iface.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getTypeIcon(iface.type)}
-                    <div>
-                      <CardTitle className="text-lg">{iface.name}</CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          {iface.device}
-                        </Badge>
-                        <Badge
-                          variant={iface.type === "wan" ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {iface.type.toUpperCase()}
-                        </Badge>
-                        <div className="flex items-center gap-1">
-                          {getStatusIcon(iface.status)}
-                          <span className="text-xs text-gray-500">
-                            {iface.status === "up" ? "运行中" : "已停止"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>网络性能优化</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>包转向 (Packet Steering)</Label>
+              <p className="text-sm text-muted-foreground">
+                启用多核CPU的数据包处理,提升网络吞吐量
+              </p>
+            </div>
+            <Switch
+              checked={packetSteering}
+              onCheckedChange={setPacketSteering}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>RPS (Receive Packet Steering)</Label>
+              <p className="text-sm text-muted-foreground">
+                接收数据包转向,将网络接收负载分配到多个CPU核心
+              </p>
+            </div>
+            <Switch
+              checked={rpsEnabled}
+              onCheckedChange={setRpsEnabled}
+            />
+          </div>
+
+          {rpsEnabled && (
+            <div className="space-y-2">
+              <Label htmlFor="rps-cpus">RPS CPU 掩码</Label>
+              <Input
+                id="rps-cpus"
+                placeholder="例如: f (使用CPU 0-3)"
+                value={rpsCpus}
+                onChange={(e) => setRpsCpus(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                十六进制CPU掩码,指定用于RPS的CPU核心
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={updateGlobalConfig.isPending}>
+          {updateGlobalConfig.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          保存配置
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ==================== 网口配置标签页 ====================
+function PortConfigTab() {
+  const [activeTab, setActiveTab] = useState<"wan" | "lan">("wan");
+  const [editingPort, setEditingPort] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const utils = trpc.useUtils();
+  const { data: ports, isLoading } = trpc.networkConfig.listPorts.useQuery();
+  
+  const createPort = trpc.networkConfig.createPort.useMutation({
+    onSuccess: () => {
+      toast.success("网口创建成功");
+      utils.networkConfig.listPorts.invalidate();
+      setIsDialogOpen(false);
+      setEditingPort(null);
+    },
+    onError: (error) => {
+      toast.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  const updatePort = trpc.networkConfig.updatePort.useMutation({
+    onSuccess: () => {
+      toast.success("网口更新成功");
+      utils.networkConfig.listPorts.invalidate();
+      setIsDialogOpen(false);
+      setEditingPort(null);
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
+
+  const deletePort = trpc.networkConfig.deletePort.useMutation({
+    onSuccess: () => {
+      toast.success("网口已删除");
+      utils.networkConfig.listPorts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`删除失败: ${error.message}`);
+    },
+  });
+
+  const restartPort = trpc.networkConfig.restartPort.useMutation({
+    onSuccess: () => {
+      toast.success("网口已重启");
+      utils.networkConfig.listPorts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`重启失败: ${error.message}`);
+    },
+  });
+
+  const stopPort = trpc.networkConfig.stopPort.useMutation({
+    onSuccess: () => {
+      toast.success("网口已停止");
+      utils.networkConfig.listPorts.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`停止失败: ${error.message}`);
+    },
+  });
+
+  const wanPorts = ports?.filter((p) => p.type === "wan") || [];
+  const lanPorts = ports?.filter((p) => p.type === "lan") || [];
+
+  const handleAddPort = () => {
+    setEditingPort({
+      name: "",
+      type: activeTab,
+      protocol: "static",
+      enabled: 1,
+      dhcpServer: 0,
+      ipv6: 0,
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleEditPort = (port: any) => {
+    setEditingPort(port);
+    setIsDialogOpen(true);
+  };
+
+  const handleSavePort = () => {
+    if (!editingPort) return;
+
+    if (editingPort.id) {
+      updatePort.mutate(editingPort);
+    } else {
+      createPort.mutate(editingPort);
+    }
+  };
+
+  const renderPortList = (portList: any[]) => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-32">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (portList.length === 0) {
+      return (
+        <div className="text-center py-8 text-muted-foreground">
+          暂无{activeTab === "wan" ? "WAN" : "LAN"}口配置
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {portList.map((port) => (
+          <Card key={port.id}>
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
-                    <Switch
-                      checked={iface.enabled}
-                      onCheckedChange={() => handleToggleInterface(iface)}
-                      disabled={enableMutation.isPending || disableMutation.isPending}
-                    />
+                    <h3 className="font-semibold text-lg">{port.name}</h3>
+                    <Badge variant={port.enabled ? "default" : "secondary"}>
+                      {port.enabled ? "已启用" : "已禁用"}
+                    </Badge>
+                    <Badge variant="outline">{port.protocol.toUpperCase()}</Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">接口: </span>
+                      <span>{port.ifname || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">IPv4: </span>
+                      <span>{port.ipaddr || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">网关: </span>
+                      <span>{port.gateway || "-"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">DNS: </span>
+                      <span>{port.dns || "-"}</span>
+                    </div>
+                    {port.type === "lan" && port.dhcpServer === 1 && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground">DHCP范围: </span>
+                          <span>{port.dhcpStart} - {port.dhcpEnd}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">租期: </span>
+                          <span>{port.dhcpTime}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditPort(port)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => restartPort.mutate({ id: port.id })}
+                    disabled={restartPort.isPending}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  {port.enabled === 1 ? (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        setEditingInterface(iface);
-                        setIsEditDialogOpen(true);
-                      }}
+                      onClick={() => stopPort.mutate({ id: port.id })}
+                      disabled={stopPort.isPending}
                     >
-                      <Settings className="w-4 h-4" />
+                      <Square className="h-4 w-4" />
                     </Button>
-                  </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => restartPort.mutate({ id: port.id })}
+                      disabled={restartPort.isPending}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (confirm(`确定要删除网口 ${port.name} 吗?`)) {
+                        deletePort.mutate({ id: port.id });
+                      }
+                    }}
+                    disabled={deletePort.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">协议</p>
-                    <p className="text-sm font-medium mt-1">
-                      {iface.protocol.toUpperCase()}
-                    </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "wan" | "lan")}>
+          <TabsList>
+            <TabsTrigger value="wan">WAN口配置</TabsTrigger>
+            <TabsTrigger value="lan">LAN口配置</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button onClick={handleAddPort}>
+          <Plus className="mr-2 h-4 w-4" />
+          添加{activeTab === "wan" ? "WAN" : "LAN"}口
+        </Button>
+      </div>
+
+      {activeTab === "wan" ? renderPortList(wanPorts) : renderPortList(lanPorts)}
+
+      {/* 编辑对话框 */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingPort?.id ? "编辑" : "添加"}{activeTab === "wan" ? "WAN" : "LAN"}口
+            </DialogTitle>
+            <DialogDescription>
+              配置网络接口的基本参数和高级选项
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingPort && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="port-name">接口名称</Label>
+                <Input
+                  id="port-name"
+                  value={editingPort.name}
+                  onChange={(e) =>
+                    setEditingPort({ ...editingPort, name: e.target.value })
+                  }
+                  placeholder="例如: WAN1, LAN1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="port-ifname">物理接口</Label>
+                <Input
+                  id="port-ifname"
+                  value={editingPort.ifname || ""}
+                  onChange={(e) =>
+                    setEditingPort({ ...editingPort, ifname: e.target.value })
+                  }
+                  placeholder="例如: eth0, eth1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="port-protocol">协议</Label>
+                <Select
+                  value={editingPort.protocol}
+                  onValueChange={(value) =>
+                    setEditingPort({ ...editingPort, protocol: value })
+                  }
+                >
+                  <SelectTrigger id="port-protocol">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="static">静态IP</SelectItem>
+                    <SelectItem value="dhcp">DHCP</SelectItem>
+                    <SelectItem value="pppoe">PPPoE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {editingPort.protocol === "static" && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="port-ipaddr">IPv4地址</Label>
+                      <Input
+                        id="port-ipaddr"
+                        value={editingPort.ipaddr || ""}
+                        onChange={(e) =>
+                          setEditingPort({ ...editingPort, ipaddr: e.target.value })
+                        }
+                        placeholder="192.168.1.1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="port-netmask">子网掩码</Label>
+                      <Input
+                        id="port-netmask"
+                        value={editingPort.netmask || ""}
+                        onChange={(e) =>
+                          setEditingPort({ ...editingPort, netmask: e.target.value })
+                        }
+                        placeholder="255.255.255.0"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">IPv4地址</p>
-                    <p className="text-sm font-medium mt-1">{iface.ipv4 || "-"}</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="port-gateway">网关</Label>
+                    <Input
+                      id="port-gateway"
+                      value={editingPort.gateway || ""}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, gateway: e.target.value })
+                      }
+                      placeholder="192.168.1.254"
+                    />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">子网掩码</p>
-                    <p className="text-sm font-medium mt-1">{iface.netmask || "-"}</p>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="port-dns">DNS服务器</Label>
+                    <Input
+                      id="port-dns"
+                      value={editingPort.dns || ""}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, dns: e.target.value })
+                      }
+                      placeholder="8.8.8.8 8.8.4.4"
+                    />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">网关</p>
-                    <p className="text-sm font-medium mt-1">
-                      {iface.gateway || "-"}
-                    </p>
+                </>
+              )}
+
+              {activeTab === "lan" && (
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center justify-between">
+                    <Label>启用DHCP服务器</Label>
+                    <Switch
+                      checked={editingPort.dhcpServer === 1}
+                      onCheckedChange={(checked) =>
+                        setEditingPort({ ...editingPort, dhcpServer: checked ? 1 : 0 })
+                      }
+                    />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-500">MAC地址</p>
-                    <p className="text-sm font-medium mt-1">{iface.mac}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">MTU</p>
-                    <p className="text-sm font-medium mt-1">{iface.mtu}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">接收/发送</p>
-                    <p className="text-sm font-medium mt-1">
-                      {formatBytes(iface.rxBytes)} / {formatBytes(iface.txBytes)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">运行时间</p>
-                    <p className="text-sm font-medium mt-1">
-                      {iface.uptime > 0 ? formatUptime(iface.uptime) : "-"}
-                    </p>
-                  </div>
+
+                  {editingPort.dhcpServer === 1 && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="dhcp-start">起始地址</Label>
+                          <Input
+                            id="dhcp-start"
+                            value={editingPort.dhcpStart || ""}
+                            onChange={(e) =>
+                              setEditingPort({
+                                ...editingPort,
+                                dhcpStart: e.target.value,
+                              })
+                            }
+                            placeholder="192.168.1.100"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="dhcp-end">结束地址</Label>
+                          <Input
+                            id="dhcp-end"
+                            value={editingPort.dhcpEnd || ""}
+                            onChange={(e) =>
+                              setEditingPort({
+                                ...editingPort,
+                                dhcpEnd: e.target.value,
+                              })
+                            }
+                            placeholder="192.168.1.200"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="dhcp-time">租约时间</Label>
+                        <Input
+                          id="dhcp-time"
+                          value={editingPort.dhcpTime || ""}
+                          onChange={(e) =>
+                            setEditingPort({
+                              ...editingPort,
+                              dhcpTime: e.target.value,
+                            })
+                          }
+                          placeholder="12h"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                {iface.dns.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-500">DNS服务器</p>
-                    <p className="text-sm font-medium mt-1">
-                      {iface.dns.join(", ")}
-                    </p>
+              )}
+
+              <div className="flex items-center justify-between border-t pt-4">
+                <Label>启用此接口</Label>
+                <Switch
+                  checked={editingPort.enabled === 1}
+                  onCheckedChange={(checked) =>
+                    setEditingPort({ ...editingPort, enabled: checked ? 1 : 0 })
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={handleSavePort}
+              disabled={createPort.isPending || updatePort.isPending}
+            >
+              {(createPort.isPending || updatePort.isPending) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ==================== 接口配置标签页 ====================
+function InterfaceConfigTab() {
+  // TODO: 实现接口配置功能
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>接口配置</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-muted-foreground">接口配置功能开发中...</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ==================== 设备配置标签页 ====================
+function DeviceConfigTab() {
+  const { data: devices, isLoading } = trpc.networkConfig.listDevices.useQuery();
+  const [editingDevice, setEditingDevice] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const utils = trpc.useUtils();
+  const updateDevice = trpc.networkConfig.updateDevice.useMutation({
+    onSuccess: () => {
+      toast.success("设备配置已更新");
+      utils.networkConfig.listDevices.invalidate();
+      setIsDialogOpen(false);
+      setEditingDevice(null);
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
+
+  const scanDevices = trpc.networkConfig.scanDevices.useMutation({
+    onSuccess: () => {
+      toast.success("设备扫描完成");
+      utils.networkConfig.listDevices.invalidate();
+    },
+    onError: (error) => {
+      toast.error(`扫描失败: ${error.message}`);
+    },
+  });
+
+  const handleEditDevice = (device: any) => {
+    setEditingDevice(device);
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveDevice = () => {
+    if (!editingDevice) return;
+    updateDevice.mutate(editingDevice);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={() => scanDevices.mutate()} disabled={scanDevices.isPending}>
+          {scanDevices.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          <RefreshCw className="mr-2 h-4 w-4" />
+          扫描设备
+        </Button>
+      </div>
+
+      {devices && devices.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            暂无网络设备,点击"扫描设备"按钮检测系统网络设备
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {devices?.map((device) => (
+            <Card key={device.id}>
+              <CardContent className="pt-6">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-lg">{device.name}</h3>
+                      <Badge variant={device.enabled ? "default" : "secondary"}>
+                        {device.enabled ? "已启用" : "已禁用"}
+                      </Badge>
+                      <Badge variant="outline">{device.type}</Badge>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">MAC地址: </span>
+                        <span className="font-mono">{device.macaddr || "-"}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">MTU: </span>
+                        <span>{device.mtu || 1500}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">发送队列: </span>
+                        <span>{device.txqueuelen || 1000}</span>
+                      </div>
+                      {device.type === "bridge" && device.bridgePorts && (
+                        <div className="col-span-3">
+                          <span className="text-muted-foreground">网桥端口: </span>
+                          <span>{device.bridgePorts}</span>
+                        </div>
+                      )}
+                      {device.type === "vlan" && (
+                        <>
+                          <div>
+                            <span className="text-muted-foreground">VLAN ID: </span>
+                            <span>{device.vlanId}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">父设备: </span>
+                            <span>{device.parentDevice}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex gap-4 text-sm">
+                      <div className="flex items-center gap-1">
+                        {device.promisc ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className="text-muted-foreground">混杂模式</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {device.multicast ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-gray-400" />
+                        )}
+                        <span className="text-muted-foreground">多播</span>
+                      </div>
+                      {device.type === "bridge" && (
+                        <div className="flex items-center gap-1">
+                          {device.igmpSnooping ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-gray-400" />
+                          )}
+                          <span className="text-muted-foreground">IGMP Snooping</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditDevice(device)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* 添加接口对话框 */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+      {/* 编辑对话框 */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>添加网络接口</DialogTitle>
+            <DialogTitle>设备配置 - {editingDevice?.name}</DialogTitle>
             <DialogDescription>
-              配置新的网络接口(WAN/LAN/VLAN)
+              配置网络设备的高级参数
             </DialogDescription>
           </DialogHeader>
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="basic">基本设置</TabsTrigger>
-              <TabsTrigger value="advanced">高级设置</TabsTrigger>
-              <TabsTrigger value="physical">物理设置</TabsTrigger>
-            </TabsList>
-            <TabsContent value="basic" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">接口名称</Label>
-                  <Input
-                    id="name"
-                    value={newInterface.name}
-                    onChange={(e) =>
-                      setNewInterface({ ...newInterface, name: e.target.value })
-                    }
-                    placeholder="例如: WAN2"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="type">接口类型</Label>
-                  <Select
-                    value={newInterface.type}
-                    onValueChange={(value) =>
-                      setNewInterface({
-                        ...newInterface,
-                        type: value as InterfaceType,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="wan">WAN (外网)</SelectItem>
-                      <SelectItem value="lan">LAN (内网)</SelectItem>
-                      <SelectItem value="guest">Guest (访客)</SelectItem>
-                      <SelectItem value="vlan">VLAN</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="protocol">协议</Label>
-                  <Select
-                    value={newInterface.protocol}
-                    onValueChange={(value) =>
-                      setNewInterface({
-                        ...newInterface,
-                        protocol: value as InterfaceProtocol,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="static">静态IP</SelectItem>
-                      <SelectItem value="dhcp">DHCP客户端</SelectItem>
-                      <SelectItem value="pppoe">PPPoE拨号</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="device">物理设备</Label>
-                  <Select
-                    value={newInterface.device}
-                    onValueChange={(value) =>
-                      setNewInterface({ ...newInterface, device: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择物理设备" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {physicalInterfacesData && physicalInterfacesData.length > 0 ? (
-                        physicalInterfacesData.map((iface: any) => (
-                          <SelectItem key={iface.name} value={iface.name}>
-                            {iface.name} ({iface.mac || 'No MAC'})
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="" disabled>
-                          正在加载...
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+
+          {editingDevice && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="device-mtu">MTU</Label>
+                <Input
+                  id="device-mtu"
+                  type="number"
+                  value={editingDevice.mtu || 1500}
+                  onChange={(e) =>
+                    setEditingDevice({
+                      ...editingDevice,
+                      mtu: parseInt(e.target.value),
+                    })
+                  }
+                />
               </div>
-              {newInterface.protocol === "static" && (
-                <div className="grid grid-cols-2 gap-4">
+
+              <div className="space-y-2">
+                <Label htmlFor="device-txqueuelen">发送队列长度</Label>
+                <Input
+                  id="device-txqueuelen"
+                  type="number"
+                  value={editingDevice.txqueuelen || 1000}
+                  onChange={(e) =>
+                    setEditingDevice({
+                      ...editingDevice,
+                      txqueuelen: parseInt(e.target.value),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-4 border-t pt-4">
+                <div className="flex items-center justify-between">
                   <div>
-                    <Label htmlFor="ipv4">IPv4地址</Label>
-                    <Input
-                      id="ipv4"
-                      value={newInterface.ipv4}
-                      onChange={(e) =>
-                        setNewInterface({ ...newInterface, ipv4: e.target.value })
-                      }
-                      placeholder="192.168.1.1"
-                    />
+                    <Label>混杂模式 (Promiscuous Mode)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      接收所有经过网卡的数据包
+                    </p>
                   </div>
-                  <div>
-                    <Label htmlFor="netmask">子网掩码</Label>
-                    <Input
-                      id="netmask"
-                      value={newInterface.netmask}
-                      onChange={(e) =>
-                        setNewInterface({
-                          ...newInterface,
-                          netmask: e.target.value,
-                        })
-                      }
-                      placeholder="255.255.255.0"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="gateway">网关</Label>
-                    <Input
-                      id="gateway"
-                      value={newInterface.gateway}
-                      onChange={(e) =>
-                        setNewInterface({
-                          ...newInterface,
-                          gateway: e.target.value,
-                        })
-                      }
-                      placeholder="192.168.1.254"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="dns">DNS服务器</Label>
-                    <Input
-                      id="dns"
-                      value={newInterface.dns}
-                      onChange={(e) =>
-                        setNewInterface({ ...newInterface, dns: e.target.value })
-                      }
-                      placeholder="8.8.8.8, 8.8.4.4"
-                    />
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-            <TabsContent value="advanced" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mtu">MTU</Label>
-                  <Input
-                    id="mtu"
-                    type="number"
-                    value={newInterface.mtu}
-                    onChange={(e) =>
-                      setNewInterface({
-                        ...newInterface,
-                        mtu: parseInt(e.target.value),
+                  <Switch
+                    checked={editingDevice.promisc === 1}
+                    onCheckedChange={(checked) =>
+                      setEditingDevice({
+                        ...editingDevice,
+                        promisc: checked ? 1 : 0,
                       })
                     }
                   />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>多播 (Multicast)</Label>
+                    <p className="text-sm text-muted-foreground">
+                      启用多播数据包接收
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingDevice.multicast === 1}
+                    onCheckedChange={(checked) =>
+                      setEditingDevice({
+                        ...editingDevice,
+                        multicast: checked ? 1 : 0,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>ICMP重定向</Label>
+                    <p className="text-sm text-muted-foreground">
+                      接受ICMP重定向消息
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingDevice.icmpRedirect === 1}
+                    onCheckedChange={(checked) =>
+                      setEditingDevice({
+                        ...editingDevice,
+                        icmpRedirect: checked ? 1 : 0,
+                      })
+                    }
+                  />
+                </div>
+
+                {editingDevice.type === "bridge" && (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>IGMP Snooping</Label>
+                      <p className="text-sm text-muted-foreground">
+                        网桥IGMP监听,优化多播流量
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editingDevice.igmpSnooping === 1}
+                      onCheckedChange={(checked) =>
+                        setEditingDevice({
+                          ...editingDevice,
+                          igmpSnooping: checked ? 1 : 0,
+                        })
+                      }
+                    />
+                  </div>
+                )}
               </div>
-              <div className="text-sm text-gray-500">
-                更多高级选项即将推出,包括:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>MAC地址克隆</li>
-                  <li>VLAN ID配置</li>
-                  <li>IPv6设置</li>
-                  <li>防火墙区域分配</li>
-                </ul>
-              </div>
-            </TabsContent>
-            <TabsContent value="physical" className="space-y-4">
-              <div className="text-sm text-gray-500">
-                物理设置功能即将推出,包括:
-                <ul className="list-disc list-inside mt-2 space-y-1">
-                  <li>桥接设备选择</li>
-                  <li>网卡绑定(Bonding)</li>
-                  <li>链路聚合(LACP)</li>
-                  <li>端口镜像</li>
-                </ul>
-              </div>
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               取消
             </Button>
-            <Button 
-              onClick={handleAddInterface}
-              disabled={configureMutation.isPending || createVLANMutation.isPending}
-            >
-              {(configureMutation.isPending || createVLANMutation.isPending) && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            <Button onClick={handleSaveDevice} disabled={updateDevice.isPending}>
+              {updateDevice.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              添加
+              保存
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
 
-      {/* 编辑接口对话框 */}
-      {editingInterface && (
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>编辑接口 - {editingInterface.name}</DialogTitle>
-              <DialogDescription>
-                修改接口配置参数
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-ipv4">IPv4地址</Label>
-                  <Input
-                    id="edit-ipv4"
-                    value={editingInterface.ipv4}
-                    onChange={(e) =>
-                      setEditingInterface({
-                        ...editingInterface,
-                        ipv4: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-netmask">子网掩码</Label>
-                  <Input
-                    id="edit-netmask"
-                    value={editingInterface.netmask}
-                    onChange={(e) =>
-                      setEditingInterface({
-                        ...editingInterface,
-                        netmask: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-gateway">网关</Label>
-                  <Input
-                    id="edit-gateway"
-                    value={editingInterface.gateway}
-                    onChange={(e) =>
-                      setEditingInterface({
-                        ...editingInterface,
-                        gateway: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-mtu">MTU</Label>
-                  <Input
-                    id="edit-mtu"
-                    type="number"
-                    value={editingInterface.mtu}
-                    onChange={(e) =>
-                      setEditingInterface({
-                        ...editingInterface,
-                        mtu: parseInt(e.target.value),
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                取消
-              </Button>
-              <Button 
-                onClick={handleEditInterface}
-                disabled={configureMutation.isPending}
-              >
-                {configureMutation.isPending && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
-                保存
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+// ==================== 主组件 ====================
+export default function NetworkInterfaces() {
+  const [activeTab, setActiveTab] = useState("global");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">网络接口配置</h1>
+          <p className="text-muted-foreground mt-1">
+            配置网络接口、设备和全局网络参数
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="global">
+            <Globe className="mr-2 h-4 w-4" />
+            全局配置
+          </TabsTrigger>
+          <TabsTrigger value="ports">
+            <Network className="mr-2 h-4 w-4" />
+            网口配置
+          </TabsTrigger>
+          <TabsTrigger value="interfaces">
+            <Settings className="mr-2 h-4 w-4" />
+            接口配置
+          </TabsTrigger>
+          <TabsTrigger value="devices">
+            <Network className="mr-2 h-4 w-4" />
+            设备配置
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="global" className="mt-6">
+          <GlobalConfigTab />
+        </TabsContent>
+
+        <TabsContent value="ports" className="mt-6">
+          <PortConfigTab />
+        </TabsContent>
+
+        <TabsContent value="interfaces" className="mt-6">
+          <InterfaceConfigTab />
+        </TabsContent>
+
+        <TabsContent value="devices" className="mt-6">
+          <DeviceConfigTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

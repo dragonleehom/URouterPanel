@@ -91,8 +91,14 @@ export async function createNetworkPort(port: Omit<NetworkPort, 'id' | 'createdA
   const result = await db.insert(networkPorts).values(port as any);
   const newPort = await getNetworkPort(Number(result[0].insertId));
   
-  if (newPort) {
-    await applyNetworkPort(newPort);
+  if (newPort && newPort.ifname && newPort.enabled) {
+    // 只在指定了接口且启用时才应用配置
+    try {
+      await applyNetworkPort(newPort);
+    } catch (error) {
+      console.error(`Failed to apply network port ${newPort.name}:`, error);
+      // 不抛出错误,允许配置保存到数据库
+    }
   }
   
   return newPort!;
@@ -104,8 +110,14 @@ export async function updateNetworkPort(id: number, updates: Partial<NetworkPort
   await db.update(networkPorts).set(updates).where(eq(networkPorts.id, id));
   
   const port = await getNetworkPort(id);
-  if (port) {
-    await applyNetworkPort(port);
+  if (port && port.ifname && port.enabled) {
+    // 只在指定了接口且启用时才应用配置
+    try {
+      await applyNetworkPort(port);
+    } catch (error) {
+      console.error(`Failed to apply network port ${port.name}:`, error);
+      // 不抛出错误,允许配置更新
+    }
   }
 }
 
@@ -236,8 +248,14 @@ export async function updateNetworkDevice(id: number, updates: Partial<NetworkDe
   await db.update(networkDevices).set(updates).where(eq(networkDevices.id, id));
   
   const device = await getNetworkDevice(id);
-  if (device) {
-    await applyDeviceConfig(device);
+  if (device && device.enabled) {
+    // 只在启用时才应用配置
+    try {
+      await applyDeviceConfig(device);
+    } catch (error) {
+      console.error(`Failed to apply device config ${device.name}:`, error);
+      // 不抛出错误,允许配置更新
+    }
   }
 }
 
