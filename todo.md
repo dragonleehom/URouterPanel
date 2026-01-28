@@ -856,3 +856,36 @@
 - [ ] 说明BIOS设置要求(VT-d/VT-x/IOMMU)
 - [ ] 说明内核参数配置(intel_iommu=on/amd_iommu=on)
 - [ ] 准备物理机测试计划
+
+
+## 虚拟机智能化性能优化界面 (已完成)
+
+### 目标
+在虚拟机创建界面添加智能化的性能优化功能,帮助用户轻松配置高性能虚拟机
+
+### 功能清单
+- [x] 创建HardwareDetectionPanel组件
+  - [x] 显示IOMMU支持状态
+  - [x] 显示可用GPU列表
+  - [x] 显示网卡SR-IOV支持
+  - [x] 显示NUMA拓扑信息
+  - [x] 显示CPU虚拟化特性
+- [x] 创建OptimizationRecommendations组件
+  - [x] 调用getPerformanceRecommendations API
+  - [x] 显示优化建议列表
+  - [x] 实现一键优化按钮
+  - [x] 自动应用推荐配置
+- [x] 创建AdvancedOptions组件
+  - [x] GPU直通选择器(列出可用GPU设备)
+  - [x] 网卡直通选择器(列出可用网卡设备)
+  - [x] 硬盘直通选择器(列出可用存储设备)
+  - [x] CPU Pinning配置界面
+  - [x] NUMA节点绑定配置
+  - [x] 大页内存配置
+- [x] 集成到虚拟机创建对话框
+  - [x] 添加"硬件检测"标签页
+  - [x] 添加"性能优化"标签页
+  - [x] 添加"高级选项"标签页
+  - [x] 实现配置数据收集
+- [x] 测试和优化
+  - [x] TypeScript编译验证

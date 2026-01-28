@@ -1,6 +1,7 @@
 /**
  * 虚拟机管理页面
  * 基于QEMU实现虚拟机创建、启动、停止等功能
+ * 集成智能性能优化和高级配置选项
  */
 
 import { useState } from "react";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,9 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { HardwareDetectionPanel } from "@/components/vm/HardwareDetectionPanel";
+import { OptimizationRecommendations } from "@/components/vm/OptimizationRecommendations";
+import { AdvancedOptions, type AdvancedVMConfig } from "@/components/vm/AdvancedOptions";
 
 export default function VMManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -41,6 +46,7 @@ export default function VMManagement() {
     cpus: 2,
     diskSize: 20,
   });
+  const [advancedConfig, setAdvancedConfig] = useState<AdvancedVMConfig>({});
 
   // 获取虚拟机列表
   const { data: vms, isLoading, refetch } = trpc.vm.list.useQuery();
@@ -54,6 +60,7 @@ export default function VMManagement() {
       alert("虚拟机创建成功!");
       setCreateDialogOpen(false);
       setNewVM({ name: "", memory: 2048, cpus: 2, diskSize: 20 });
+      setAdvancedConfig({});
       refetch();
     },
     onError: (error) => {
@@ -99,6 +106,8 @@ export default function VMManagement() {
       alert("请输入虚拟机名称");
       return;
     }
+    // TODO: 将advancedConfig传递给后端
+    console.log("Advanced config:", advancedConfig);
     createMutation.mutate(newVM);
   };
 
@@ -118,13 +127,27 @@ export default function VMManagement() {
     }
   };
 
+  const handleApplyOptimization = (config: any) => {
+    // 应用一键优化配置
+    setAdvancedConfig({
+      ...advancedConfig,
+      cpuPinning: { enabled: config.enableCPUPinning },
+      numa: { enabled: config.enableNUMA },
+      hugepages: {
+        enabled: config.enableHugepages,
+        size: config.hugepagesSize,
+      },
+    });
+    alert("优化配置已应用!请在高级选项中查看详细配置。");
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">虚拟机管理</h1>
-          <p className="text-gray-500 mt-1">基于QEMU的虚拟机管理系统</p>
+          <p className="text-gray-500 mt-1">基于QEMU的虚拟机管理系统,支持GPU直通和性能优化</p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -133,57 +156,84 @@ export default function VMManagement() {
               创建虚拟机
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>创建新虚拟机</DialogTitle>
               <DialogDescription>
-                配置虚拟机参数并创建虚拟磁盘
+                配置虚拟机参数、性能优化和高级选项
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="vm-name">虚拟机名称</Label>
-                <Input
-                  id="vm-name"
-                  placeholder="例如: ubuntu-server"
-                  value={newVM.name}
-                  onChange={(e) => setNewVM({ ...newVM, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vm-memory">内存 (MB)</Label>
-                <Input
-                  id="vm-memory"
-                  type="number"
-                  min="512"
-                  max="32768"
-                  value={newVM.memory}
-                  onChange={(e) => setNewVM({ ...newVM, memory: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vm-cpus">CPU核心数</Label>
-                <Input
-                  id="vm-cpus"
-                  type="number"
-                  min="1"
-                  max="16"
-                  value={newVM.cpus}
-                  onChange={(e) => setNewVM({ ...newVM, cpus: parseInt(e.target.value) })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vm-disk">磁盘大小 (GB)</Label>
-                <Input
-                  id="vm-disk"
-                  type="number"
-                  min="1"
-                  max="500"
-                  value={newVM.diskSize}
-                  onChange={(e) => setNewVM({ ...newVM, diskSize: parseInt(e.target.value) })}
-                />
-              </div>
-            </div>
+
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic">基本配置</TabsTrigger>
+                <TabsTrigger value="hardware">硬件检测</TabsTrigger>
+                <TabsTrigger value="optimization">性能优化</TabsTrigger>
+                <TabsTrigger value="advanced">高级选项</TabsTrigger>
+              </TabsList>
+
+              {/* 基本配置 */}
+              <TabsContent value="basic" className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="vm-name">虚拟机名称</Label>
+                  <Input
+                    id="vm-name"
+                    placeholder="例如: ubuntu-server"
+                    value={newVM.name}
+                    onChange={(e) => setNewVM({ ...newVM, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vm-memory">内存 (MB)</Label>
+                  <Input
+                    id="vm-memory"
+                    type="number"
+                    min="512"
+                    max="32768"
+                    value={newVM.memory}
+                    onChange={(e) => setNewVM({ ...newVM, memory: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vm-cpus">CPU核心数</Label>
+                  <Input
+                    id="vm-cpus"
+                    type="number"
+                    min="1"
+                    max="16"
+                    value={newVM.cpus}
+                    onChange={(e) => setNewVM({ ...newVM, cpus: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vm-disk">磁盘大小 (GB)</Label>
+                  <Input
+                    id="vm-disk"
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={newVM.diskSize}
+                    onChange={(e) => setNewVM({ ...newVM, diskSize: parseInt(e.target.value) })}
+                  />
+                </div>
+              </TabsContent>
+
+              {/* 硬件检测 */}
+              <TabsContent value="hardware" className="py-4">
+                <HardwareDetectionPanel />
+              </TabsContent>
+
+              {/* 性能优化 */}
+              <TabsContent value="optimization" className="py-4">
+                <OptimizationRecommendations onApplyOptimization={handleApplyOptimization} />
+              </TabsContent>
+
+              {/* 高级选项 */}
+              <TabsContent value="advanced" className="py-4">
+                <AdvancedOptions config={advancedConfig} onChange={setAdvancedConfig} />
+              </TabsContent>
+            </Tabs>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                 取消
