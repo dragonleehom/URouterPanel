@@ -1079,3 +1079,39 @@
 
 ### 测试验证
 - [x] TypeScript编译验证
+
+
+## 虚拟网络实时流量监控 ✅
+
+### 目标
+为每个虚拟网络添加实时流量监控面板,以可视化方式展示带宽使用、数据包统计和连接信息
+
+### 后端开发
+- [x] 创建流量统计服务(networkTrafficMonitor.ts)
+  - [x] 使用`ip -s link show`命令获取网络接口统计
+  - [x] 解析RX/TX字节数、数据包数、错误数
+  - [x] 计算实时带宽(bytes/s)
+  - [x] 缓存历史数据点(最近300个点)
+- [x] 创建tRPC API(virtualNetworkRouter.ts)
+  - [x] getNetworkTraffic: 获取指定网络的流量统计
+  - [x] getNetworkTrafficHistory: 获取历史流量数据
+  - [x] getAllNetworksTraffic: 获取所有网络的流量概览
+
+### 前端开发
+- [x] 安装Recharts依赖(`pnpm add recharts`)
+- [x] 创建NetworkTrafficPanel组件
+  - [x] 实时流量曲线图(RX/TX)
+  - [x] 当前带宽显示(上传/下载)
+  - [x] 总流量统计(累计RX/TX)
+  - [x] 数据包统计(总数/错误/丢包)
+- [x] 集成到VirtualNetworkManagement页面
+  - [x] 在网络列表卡片添加"监控"按钮
+  - [x] 点击打开流量监控对话框
+  - [x] 使用useQuery轮询获取实时数据(每5秒)
+- [x] Recharts LineChart绘制流量曲线
+  - [x] 双Y轴显示RX和TX
+  - [x] Tooltip显示详细数据
+  - [x] 响应式设计
+
+### 测试验证
+- [x] TypeScript编译验证

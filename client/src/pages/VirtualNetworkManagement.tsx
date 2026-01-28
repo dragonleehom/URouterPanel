@@ -35,12 +35,19 @@ import {
   Edit,
   Globe,
   Shield,
+  Activity,
 } from "lucide-react";
 import { NetworkTopologyEditor } from "@/components/network/NetworkTopologyEditor";
+import { NetworkTrafficPanel } from "@/components/network/NetworkTrafficPanel";
 
 export default function VirtualNetworkManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedNetworkId, setSelectedNetworkId] = useState<number | null>(null);
+  const [trafficPanelOpen, setTrafficPanelOpen] = useState(false);
+  const [selectedNetworkForTraffic, setSelectedNetworkForTraffic] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [newNetwork, setNewNetwork] = useState({
     name: "",
     description: "",
@@ -305,6 +312,17 @@ export default function VirtualNetworkManagement() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedNetworkForTraffic({ id: network.id, name: network.name });
+                        setTrafficPanelOpen(true);
+                      }}
+                      title="流量监控"
+                    >
+                      <Activity className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={() => handleDelete(network.id, network.name)}
                       disabled={deleteMutation.isPending}
@@ -337,6 +355,16 @@ export default function VirtualNetworkManagement() {
             <NetworkTopologyEditor networkId={selectedNetworkId} />
           </CardContent>
         </Card>
+      )}
+
+      {/* 流量监控面板 */}
+      {selectedNetworkForTraffic && (
+        <NetworkTrafficPanel
+          open={trafficPanelOpen}
+          onOpenChange={setTrafficPanelOpen}
+          networkId={selectedNetworkForTraffic.id}
+          networkName={selectedNetworkForTraffic.name}
+        />
       )}
     </div>
   );

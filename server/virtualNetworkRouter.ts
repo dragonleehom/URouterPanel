@@ -16,6 +16,7 @@ import {
 } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import * as networkManager from "./networkManager";
+import * as trafficMonitor from "./networkTrafficMonitor";
 
 export const virtualNetworkRouter = router({
   /**
@@ -670,4 +671,99 @@ export const virtualNetworkRouter = router({
       const rules = await db.select().from(natRules).where(eq(natRules.networkId, input.networkId));
       return rules;
     }),
+
+  /**
+   * 获取网络的实时流量统计
+   */
+  getNetworkTraffic: protectedProcedure
+    .input(z.object({ networkId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 获取网络信息
+      const [network] = await db
+        .select()
+        .from(virtualNetworks)
+        .where(eq(virtualNetworks.id, input.networkId));
+
+      if (!network || !network.bridgeName) {
+        throw new Error("Network not found or bridge not created");
+      }
+
+      // 采集流量数据
+      const stats = await trafficMonitor.collectTrafficStats(network.bridgeName);
+      
+      if (!stats) {
+        return null;
+      }
+
+      return stats;
+    }),
+
+  /**
+   * 获取网络的历史流量数据
+   */
+  getNetworkTrafficHistory: protectedProcedure
+    .input(
+      z.object({
+        networkId: z.number(),
+        maxPoints: z.number().optional().default(60),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 获取网络信息
+      const [network] = await db
+        .select()
+        .from(virtualNetworks)
+        .where(eq(virtualNetworks.id, input.networkId));
+
+      if (!network || !network.bridgeName) {
+        throw new Error("Network not found or bridge not created");
+      }
+
+      // 获取历史数据
+      const history = trafficMonitor.getTrafficHistory(
+        network.bridgeName,
+        input.maxPoints
+      );
+
+      return history;
+    }),
+
+  /**
+   * 获取所有网络的流量概览
+   */
+  getAllNetworksTraffic: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    // 获取所有网络
+    const networks = await db.select().from(virtualNetworks);
+
+    // 采集每个网络的流量数据
+    const trafficData = await Promise.all(
+      networks.map(async (network) => {
+        if (!network.bridgeName) {
+          return {
+            networkId: network.id,
+            networkName: network.name,
+            stats: null,
+          };
+        }
+
+        const stats = await trafficMonitor.collectTrafficStats(network.bridgeName);
+        return {
+          networkId: network.id,
+          networkName: network.name,
+          stats,
+        };
+      })
+    );
+
+    return trafficData;
+  }),
 });
