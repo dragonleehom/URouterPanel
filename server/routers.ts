@@ -5,6 +5,7 @@ import { appStoreRouter } from "./appStoreRouter";
 import { containerRouter } from "./containerRouter";
 import { containerMonitorRouter } from "./containerMonitorRouter";
 import { networkRouter } from "./networkRouter";
+import { virtualNetworkRouter } from "./virtualNetworkRouter";
 import { vmRouter } from "./vmRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from "./api-client";
@@ -24,6 +25,7 @@ export const appRouter = router({
   container: containerRouter,
   containerMonitor: containerMonitorRouter,
   network: networkRouter,
+  virtualNetwork: virtualNetworkRouter,
   vm: vmRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

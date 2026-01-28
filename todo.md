@@ -889,3 +889,130 @@
   - [x] 实现配置数据收集
 - [x] 测试和优化
   - [x] TypeScript编译验证
+
+
+## 虚拟网络管理功能 (当前任务)
+
+### 目标
+创建可视化的虚拟网络管理功能,支持容器和虚拟机的统一网络配置,通过拖拽式拓扑编辑器设计网络架构
+
+### 功能需求
+- [ ] 统一网络管理 - 容器和虚拟机共享虚拟网络配置
+- [ ] 可视化拓扑编辑器 - 使用React Flow实现拖拽式网络设计
+- [ ] 网络组件支持
+  - [ ] 虚拟交换机(Bridge)
+  - [ ] 虚拟路由器(Router)
+  - [ ] 物理网卡绑定
+  - [ ] VLAN配置
+- [ ] 网络配置
+  - [ ] 子网和IP地址分配
+  - [ ] 路由规则配置
+  - [ ] NAT和端口转发
+  - [ ] 防火墙规则
+- [ ] 持久化存储 - 保存网络拓扑到数据库
+- [ ] 集成使用 - 容器和虚拟机创建时选择网络
+
+### 技术架构设计
+**后端 (Linux网络栈)**
+- 使用Linux Bridge创建虚拟交换机
+- 使用iptables/nftables配置路由和NAT
+- 使用ip命令管理虚拟网络接口
+- 使用VLAN子接口实现网络隔离
+
+**数据模型**
+- networks表: 存储虚拟网络配置
+- network_topology表: 存储拓扑关系(节点和连接)
+- network_interfaces表: 存储网络接口映射
+
+**前端 (React Flow)**
+- 节点类型: Bridge、Router、PhysicalNIC、Container、VM
+- 边类型: VirtualLink、VLANLink
+- 拖拽创建和连接组件
+- 右侧面板配置节点属性
+
+### 开发任务清单
+
+#### 后端开发
+- [ ] 创建数据库schema (networks, network_topology, network_interfaces)
+- [ ] 实现网络管理服务 (server/networkManager.ts)
+  - [ ] 创建/删除Linux Bridge
+  - [ ] 配置VLAN子接口
+  - [ ] 管理iptables规则
+  - [ ] 分配IP地址和子网
+- [ ] 创建tRPC路由 (server/networkRouter.ts)
+  - [ ] network.list - 列出所有网络
+  - [ ] network.create - 创建虚拟网络
+  - [ ] network.delete - 删除虚拟网络
+  - [ ] network.getTopology - 获取拓扑数据
+  - [ ] network.saveTopology - 保存拓扑数据
+  - [ ] network.getPhysicalNICs - 获取物理网卡列表
+  - [ ] network.attachToContainer - 将网络附加到容器
+  - [ ] network.attachToVM - 将网络附加到虚拟机
+
+#### 前端开发
+- [ ] 安装React Flow依赖 (pnpm add reactflow)
+- [ ] 创建虚拟网络管理页面 (client/src/pages/VirtualNetworkManagement.tsx)
+- [ ] 创建网络拓扑编辑器组件 (client/src/components/network/NetworkTopologyEditor.tsx)
+- [ ] 创建自定义节点组件
+  - [ ] BridgeNode - 虚拟交换机节点
+  - [ ] RouterNode - 路由器节点
+  - [ ] PhysicalNICNode - 物理网卡节点
+  - [ ] ContainerNode - 容器节点
+  - [ ] VMNode - 虚拟机节点
+- [ ] 创建节点配置面板 (client/src/components/network/NodeConfigPanel.tsx)
+- [ ] 创建网络列表组件 (client/src/components/network/NetworkList.tsx)
+- [ ] 更新容器创建对话框 - 添加网络选择器
+- [ ] 更新虚拟机创建对话框 - 添加网络选择器
+- [ ] 在App.tsx中添加路由
+
+#### 测试和文档
+- [ ] 编写vitest测试
+- [ ] 测试网络创建和删除
+- [ ] 测试拓扑编辑器功能
+- [ ] 测试容器和虚拟机网络集成
+- [ ] 保存checkpoint
+
+
+## 虚拟网络管理功能 ✅
+
+### 目标
+创建可视化虚拟网络管理功能,支持容器和虚拟机的统一网络配置
+
+### 后端开发 ✅
+- [x] 数据库Schema设计
+  - [x] virtualNetworks表(网络配置)
+  - [x] networkTopology表(拓扑数据)
+  - [x] networkInterfaces表(设备连接)
+  - [x] routingRules表(路由规则)
+  - [x] natRules表(NAT配置)
+- [x] 网络管理服务(networkManager.ts)
+  - [x] Linux Bridge创建/删除
+  - [x] VLAN配置
+  - [x] NAT规则管理
+  - [x] 物理网卡连接
+  - [x] 容器网络连接
+- [x] tRPC API路由(virtualNetworkRouter.ts)
+  - [x] 创建/删除虚拟网络
+  - [x] 保存/读取拓扑数据
+  - [x] 设备连接管理
+  - [x] NAT规则管理
+
+### 前端开发 ✅
+- [x] 虚拟网络管理页面(VirtualNetworkManagement.tsx)
+  - [x] 网络列表展示
+  - [x] 创建网络对话框
+  - [x] 网络删除功能
+- [x] 网络拓扑编辑器(NetworkTopologyEditor.tsx)
+  - [x] React Flow集成
+  - [x] 自定义节点组件
+  - [x] 拓扑保存/加载
+  - [x] 节点工具栏
+- [x] 自定义节点组件
+  - [x] BridgeNode(虚拟交换机)
+  - [x] RouterNode(虚拟路由器)
+  - [x] PhysicalNICNode(物理网卡)
+  - [x] ContainerNode(容器)
+  - [x] VMNode(虚拟机)
+- [x] 路由和菜单集成
+  - [x] 在App.tsx中注册/virtual-networks路由
+  - [x] 在DashboardLayout侧边栏添加菜单项

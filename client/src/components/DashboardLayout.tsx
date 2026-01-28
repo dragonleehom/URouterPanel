@@ -77,6 +77,7 @@ const menuItems: MenuItem[] = [
   { icon: Box, label: "容器管理", path: "/containers" },
   { icon: Network, label: "Docker网络", path: "/docker-networks" },
   { icon: Server, label: "虚拟机", path: "/vms" },
+  { icon: Network, label: "虚拟网络", path: "/virtual-networks" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },
   { icon: BarChart3, label: "系统监控", path: "/monitoring" },
   { icon: Activity, label: "系统状态", path: "/status" },

@@ -32,6 +32,7 @@ import PlaceholderPage from "./pages/PlaceholderPage";
 import AppStore from "./pages/AppStore";
 import DockerNetworkManagement from "./pages/DockerNetworkManagement";
 import VMManagement from "./pages/VMManagement";
+import VirtualNetworkManagement from "./pages/VirtualNetworkManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -64,6 +65,7 @@ function Router() {
         <Route path="/appstore" component={AppStore} />
          <Route path="/docker-network" component={DockerNetworkManagement} />
         <Route path="/vms" component={VMManagement} />
+        <Route path="/virtual-networks" component={VirtualNetworkManagement} />
         <Route path="/hardware">
           <PlaceholderPage
             title="硬件监控"
