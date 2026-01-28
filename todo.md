@@ -1284,3 +1284,38 @@
 ### 测试验证
 - [x] 创建一键部署脚本(install-all.sh)
 - [x] 创建部署文档(DEPLOYMENT.md)
+
+
+## 系统监控仪表盘 ✅
+
+### 目标
+为系统首页创建实时监控仪表盘,显示CPU、内存、磁盘、网络流量等关键指标和服务状态
+
+### 后端开发
+- [x] 创建系统监控服务(systemMonitor.ts)
+  - [x] 获取CPU使用率(通过/proc/stat)
+  - [x] 获取内存使用情况(通过/proc/meminfo)
+  - [x] 获取磁盘空间(通过df命令)
+  - [x] 获取网络流量统计(通过/proc/net/dev)
+  - [x] 缓存历史数据点(最近5分钟)
+- [x] 创建tRPC API(routers.ts)
+  - [x] getSystemStats: 获取当前系统状态
+  - [x] getSystemHistory: 获取历史监控数据
+  - [x] getServiceStatus: 获取Docker/容器/虚拟机状态
+
+### 前端开发
+- [x] 创建SystemDashboard组件
+  - [x] 系统资源卡片(CPU/内存/磁盘/网络)
+  - [x] 实时趋势图表(使用Recharts)
+  - [x] 服务状态概览卡片
+  - [x] 网络接口状态卡片
+- [x] 集成Recharts绘制资源趋势图
+  - [x] CPU使用率趋势图
+  - [x] 内存使用趋势图
+- [x] 集成到Home页面
+  - [x] 替换现有首页内容为SystemDashboard
+  - [x] 添加快捷操作按钮
+  - [x] 实现自动刷新(每5秒)
+
+### 测试验证
+- [x] TypeScript编译验证

@@ -7,6 +7,7 @@ import { containerMonitorRouter } from "./containerMonitorRouter";
 import { networkRouter } from "./networkRouter";
 import { virtualNetworkRouter } from "./virtualNetworkRouter";
 import { vmRouter } from "./vmRouter";
+import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from "./api-client";
 import { z } from "zod";
@@ -21,6 +22,19 @@ import {
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  systemMonitor: router({
+    getStats: publicProcedure.query(async () => {
+      return await getSystemStats();
+    }),
+    getHistory: publicProcedure
+      .input(z.object({ minutes: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return getSystemHistory(input?.minutes);
+      }),
+    getServiceStatus: publicProcedure.query(async () => {
+      return await getServiceStatus();
+    }),
+  }),
   appStore: appStoreRouter,
   container: containerRouter,
   containerMonitor: containerMonitorRouter,
