@@ -33,36 +33,58 @@ cat > "$SUDOERS_FILE" << 'EOF'
 # URouterOS sudo权限配置
 # 允许URouterOS服务执行网络管理命令
 
-# 网络接口管理
-Cmnd_Alias NETWORK_CMDS = /usr/sbin/ip, /usr/bin/ip
+# 网络接口管理 - 允许所有ip命令
+Cmnd_Alias NETWORK_CMDS = /usr/sbin/ip, /usr/bin/ip, \
+                          /usr/sbin/ifconfig, /usr/bin/ifconfig, \
+                          /usr/sbin/route, /usr/bin/route, \
+                          /usr/sbin/ethtool, /usr/bin/ethtool
 
-# 无线网络管理
-Cmnd_Alias WIRELESS_CMDS = /usr/sbin/iw, /usr/bin/iw, /usr/sbin/hostapd, /usr/bin/hostapd
+# 无线网络管理 - 允许iw和hostapd
+Cmnd_Alias WIRELESS_CMDS = /usr/sbin/iw, /usr/bin/iw, \
+                           /usr/sbin/hostapd, /usr/bin/hostapd, \
+                           /usr/sbin/wpa_supplicant, /usr/bin/wpa_supplicant
 
-# 系统服务管理
+# 系统服务管理 - 允许管理特定服务
 Cmnd_Alias SERVICE_CMDS = /usr/bin/systemctl start hostapd, \
                           /usr/bin/systemctl stop hostapd, \
                           /usr/bin/systemctl restart hostapd, \
                           /usr/bin/systemctl is-active hostapd, \
+                          /usr/bin/systemctl status hostapd, \
                           /usr/bin/systemctl start dnsmasq, \
                           /usr/bin/systemctl stop dnsmasq, \
                           /usr/bin/systemctl restart dnsmasq, \
                           /usr/bin/systemctl is-active dnsmasq, \
+                          /usr/bin/systemctl status dnsmasq, \
+                          /usr/bin/systemctl start docker, \
+                          /usr/bin/systemctl stop docker, \
+                          /usr/bin/systemctl restart docker, \
+                          /usr/bin/systemctl is-active docker, \
+                          /usr/bin/systemctl status docker, \
                           /usr/bin/journalctl
 
-# 配置文件写入
+# 配置文件写入 - 允许写入特定配置文件
 Cmnd_Alias CONFIG_CMDS = /usr/bin/tee /etc/hostapd/hostapd.conf, \
                          /usr/bin/tee /etc/dnsmasq.d/urouteros.conf, \
-                         /usr/bin/tee /etc/dnsmasq.d/static-leases.conf
+                         /usr/bin/tee /etc/dnsmasq.d/static-leases.conf, \
+                         /usr/bin/mkdir, \
+                         /usr/bin/chmod, \
+                         /usr/bin/chown
 
-# 防火墙管理
+# 防火墙管理 - 允许iptables和nftables
 Cmnd_Alias FIREWALL_CMDS = /usr/sbin/iptables, /usr/bin/iptables, \
                            /usr/sbin/ip6tables, /usr/bin/ip6tables, \
                            /usr/sbin/iptables-save, /usr/bin/iptables-save, \
-                           /usr/sbin/iptables-restore, /usr/bin/iptables-restore
+                           /usr/sbin/iptables-restore, /usr/bin/iptables-restore, \
+                           /usr/sbin/nft, /usr/bin/nft
+
+# Docker/容器管理 - 允许docker命令
+Cmnd_Alias DOCKER_CMDS = /usr/bin/docker, \
+                         /usr/local/bin/docker, \
+                         /usr/bin/docker-compose, \
+                         /usr/local/bin/docker-compose
 
 # 允许ubuntu用户无密码执行这些命令
-%UROUTEROS_USER% ALL=(ALL) NOPASSWD: NETWORK_CMDS, WIRELESS_CMDS, SERVICE_CMDS, CONFIG_CMDS, FIREWALL_CMDS
+%UROUTEROS_USER% ALL=(ALL) NOPASSWD: NETWORK_CMDS, WIRELESS_CMDS, SERVICE_CMDS, CONFIG_CMDS, FIREWALL_CMDS, DOCKER_CMDS
 EOF
 
 # 替换用户名占位符
@@ -88,9 +110,10 @@ echo "Sudo权限配置完成"
 echo "========================================="
 echo ""
 echo "已授予 $UROUTEROS_USER 用户以下权限:"
-echo "  - 网络接口管理 (ip命令)"
-echo "  - 无线网络管理 (iw, hostapd)"
-echo "  - 系统服务管理 (systemctl)"
-echo "  - 配置文件写入 (tee)"
-echo "  - 防火墙管理 (iptables)"
+echo "  - 网络接口管理 (ip, ifconfig, route, ethtool)"
+echo "  - 无线网络管理 (iw, hostapd, wpa_supplicant)"
+echo "  - 系统服务管理 (systemctl, journalctl)"
+echo "  - 配置文件写入 (tee, mkdir, chmod, chown)"
+echo "  - 防火墙管理 (iptables, ip6tables, nft)"
+echo "  - Docker管理 (docker, docker-compose)"
 echo ""

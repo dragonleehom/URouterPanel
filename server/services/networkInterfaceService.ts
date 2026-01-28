@@ -122,28 +122,28 @@ export async function configureInterface(name: string, config: {
     // 如果设置了IP地址
     if (config.ipv4) {
       const cidr = config.netmask ? ipv4ToCIDR(config.ipv4, config.netmask) : config.ipv4;
-      await execAsync(`ip addr flush dev ${name}`);
-      await execAsync(`ip addr add ${cidr} dev ${name}`);
+      await execAsync(`sudo ip addr flush dev ${name}`);
+      await execAsync(`sudo ip addr add ${cidr} dev ${name}`);
     }
     
     // 如果设置了IPv6地址
     if (config.ipv6) {
-      await execAsync(`ip -6 addr add ${config.ipv6} dev ${name}`);
+      await execAsync(`sudo ip -6 addr add ${config.ipv6} dev ${name}`);
     }
     
     // 如果设置了MTU
     if (config.mtu) {
-      await execAsync(`ip link set dev ${name} mtu ${config.mtu}`);
+      await execAsync(`sudo ip link set dev ${name} mtu ${config.mtu}`);
     }
     
     // 如果设置了状态
     if (config.state) {
-      await execAsync(`ip link set dev ${name} ${config.state}`);
+      await execAsync(`sudo ip link set dev ${name} ${config.state}`);
     }
     
     // 如果设置了网关
     if (config.gateway) {
-      await execAsync(`ip route add default via ${config.gateway} dev ${name}`);
+      await execAsync(`sudo ip route add default via ${config.gateway} dev ${name}`);
     }
   } catch (error) {
     console.error(`Failed to configure interface ${name}:`, error);
@@ -156,7 +156,7 @@ export async function configureInterface(name: string, config: {
  */
 export async function enableInterface(name: string): Promise<void> {
   try {
-    await execAsync(`ip link set dev ${name} up`);
+    await execAsync(`sudo ip link set dev ${name} up`);
   } catch (error) {
     throw new Error(`启用接口失败: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -167,7 +167,7 @@ export async function enableInterface(name: string): Promise<void> {
  */
 export async function disableInterface(name: string): Promise<void> {
   try {
-    await execAsync(`ip link set dev ${name} down`);
+    await execAsync(`sudo ip link set dev ${name} down`);
   } catch (error) {
     throw new Error(`禁用接口失败: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -179,13 +179,13 @@ export async function disableInterface(name: string): Promise<void> {
 export async function createBridge(name: string, interfaces: string[]): Promise<void> {
   try {
     // 创建网桥
-    await execAsync(`ip link add name ${name} type bridge`);
-    await execAsync(`ip link set dev ${name} up`);
+    await execAsync(`sudo ip link add name ${name} type bridge`);
+    await execAsync(`sudo ip link set dev ${name} up`);
     
     // 将接口添加到网桥
     for (const iface of interfaces) {
-      await execAsync(`ip link set dev ${iface} master ${name}`);
-      await execAsync(`ip link set dev ${iface} up`);
+      await execAsync(`sudo ip link set dev ${iface} master ${name}`);
+      await execAsync(`sudo ip link set dev ${iface} up`);
     }
   } catch (error) {
     throw new Error(`创建网桥失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -197,8 +197,8 @@ export async function createBridge(name: string, interfaces: string[]): Promise<
  */
 export async function deleteBridge(name: string): Promise<void> {
   try {
-    await execAsync(`ip link set dev ${name} down`);
-    await execAsync(`ip link delete ${name} type bridge`);
+    await execAsync(`sudo ip link set dev ${name} down`);
+    await execAsync(`sudo ip link delete ${name} type bridge`);
   } catch (error) {
     throw new Error(`删除网桥失败: ${error instanceof Error ? error.message : String(error)}`);
   }

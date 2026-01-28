@@ -140,7 +140,7 @@ export async function configureDHCP(config: DHCPConfig): Promise<{ success: bool
 
     // 重启dnsmasq服务
     try {
-      await execAsync('systemctl restart dnsmasq');
+      await execAsync('sudo systemctl restart dnsmasq');
       return { success: true, message: 'DHCP配置成功并已重启服务' };
     } catch (error) {
       return { success: false, message: `配置已保存但重启服务失败: ${error instanceof Error ? error.message : String(error)}` };
@@ -252,7 +252,7 @@ export async function addStaticLease(lease: { mac: string; ip: string; hostname?
 
     // 重启dnsmasq
     try {
-      await execAsync('systemctl restart dnsmasq');
+      await execAsync('sudo systemctl restart dnsmasq');
       return { success: true, message: '静态租约添加成功' };
     } catch (error) {
       return { success: false, message: `租约已添加但重启服务失败: ${error instanceof Error ? error.message : String(error)}` };
@@ -280,7 +280,7 @@ export async function deleteStaticLease(mac: string): Promise<{ success: boolean
 
     // 重启dnsmasq
     try {
-      await execAsync('systemctl restart dnsmasq');
+      await execAsync('sudo systemctl restart dnsmasq');
       return { success: true, message: '静态租约删除成功' };
     } catch (error) {
       return { success: false, message: `租约已删除但重启服务失败: ${error instanceof Error ? error.message : String(error)}` };
@@ -298,7 +298,7 @@ export async function getDHCPStatus(): Promise<DHCPStatus> {
   try {
     // 检查dnsmasq服务状态
     try {
-      await execAsync('systemctl is-active dnsmasq');
+      await execAsync('sudo systemctl is-active dnsmasq');
       const running = true;
       
       // 检查是否已配置
@@ -341,7 +341,7 @@ export async function getDHCPStatus(): Promise<DHCPStatus> {
  */
 export async function startDHCP(): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync('systemctl start dnsmasq');
+    await execAsync('sudo systemctl start dnsmasq');
     return { success: true, message: 'DHCP/DNS服务已启动' };
   } catch (error) {
     console.error('Failed to start DHCP:', error);
@@ -354,7 +354,7 @@ export async function startDHCP(): Promise<{ success: boolean; message: string }
  */
 export async function stopDHCP(): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync('systemctl stop dnsmasq');
+    await execAsync('sudo systemctl stop dnsmasq');
     return { success: true, message: 'DHCP/DNS服务已停止' };
   } catch (error) {
     console.error('Failed to stop DHCP:', error);
@@ -367,7 +367,7 @@ export async function stopDHCP(): Promise<{ success: boolean; message: string }>
  */
 export async function restartDHCP(): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync('systemctl restart dnsmasq');
+    await execAsync('sudo systemctl restart dnsmasq');
     return { success: true, message: 'DHCP/DNS服务已重启' };
   } catch (error) {
     console.error('Failed to restart DHCP:', error);

@@ -1428,3 +1428,14 @@
 - [x] 创建setup-sudo.sh脚本配置无密码sudo权限
 - [x] 更新install-all.sh添加sudo配置步骤
 - [x] 测试WiFi启动功能(待ARM设备测试)
+
+
+## 系统权限全面检查和配置
+
+- [x] 扫描所有service文件找出需要root权限的命令
+- [x] 检查网络管理相关命令(ip, ifconfig, route等)
+- [x] 检查防火墙相关命令(iptables, nftables等)
+- [x] 检查服务管理相关命令(systemctl, service等)
+- [x] 检查Docker/虚拟机管理相关命令
+- [x] 更新setup-sudo.sh添加所有缺失的权限
+- [x] 确保所有需要sudo的命令都添加了sudo前缀
