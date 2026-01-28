@@ -9,6 +9,7 @@ import { virtualNetworkRouter } from "./virtualNetworkRouter";
 import { vmRouter } from "./vmRouter";
 import { firewallRouter } from "./firewallRouter";
 import { networkConfigRouter } from "./networkConfigRouter";
+import { staticRoutesRouter } from "./staticRoutesRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -152,6 +153,9 @@ export const appRouter = router({
 
   // ==================== 网络配置管理路由 (新架构) ====================
   networkConfig: networkConfigRouter,
+  
+  // ==================== 静态路由管理路由 ====================
+  staticRoutes: staticRoutesRouter,
 
   // ==================== 路由管理路由 ====================
   routes: router({

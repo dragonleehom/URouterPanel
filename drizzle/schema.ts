@@ -262,3 +262,26 @@ export const networkDevices = mysqlTable("network_devices", {
 
 export type NetworkDevice = typeof networkDevices.$inferSelect;
 export type InsertNetworkDevice = typeof networkDevices.$inferInsert;
+
+/**
+ * 静态路由表
+ * 存储用户配置的静态路由规则
+ */
+export const staticRoutes = mysqlTable("static_routes", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 路由名称(如default-route)
+  interface: varchar("interface", { length: 50 }).notNull(), // 出口接口(wan/lan)
+  target: varchar("target", { length: 50 }).notNull(), // 目标网络(0.0.0.0/0, 192.168.1.0/24)
+  netmask: varchar("netmask", { length: 50 }), // 子网掩码(可选,也可用CIDR)
+  gateway: varchar("gateway", { length: 50 }), // 网关(可选)
+  metric: int("metric").default(0), // 路由优先级
+  mtu: int("mtu"), // MTU(可选)
+  table: varchar("table", { length: 50 }), // 路由表(可选,如main/default)
+  type: mysqlEnum("type", ["unicast", "local", "broadcast", "multicast", "unreachable", "prohibit", "blackhole", "anycast"]).default("unicast"), // 路由类型
+  enabled: int("enabled").default(1), // 启用状态
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type StaticRoute = typeof staticRoutes.$inferSelect;
+export type InsertStaticRoute = typeof staticRoutes.$inferInsert;
