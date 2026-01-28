@@ -32,6 +32,14 @@ class PythonAPIClient {
   }
 
   /**
+   * 获取物理网络接口
+   */
+  async getPhysicalInterfaces() {
+    const response = await this.client.get('/api/network/interfaces/physical');
+    return response.data;
+  }
+
+  /**
    * 获取指定接口详情
    */
   async getInterface(name: string) {

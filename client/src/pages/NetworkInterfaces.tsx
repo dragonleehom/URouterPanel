@@ -95,6 +95,14 @@ export default function NetworkInterfaces() {
     }
   );
 
+  // 查询物理接口列表(用于下拉选择)
+  const { data: physicalInterfacesData } = trpc.networkInterfaces.listPhysical.useQuery(
+    undefined,
+    {
+      refetchInterval: 10000, // 每10秒刷新
+    }
+  );
+
   // 处理错误
   if (error) {
     console.error("获取接口列表失败:", error);
@@ -533,14 +541,29 @@ export default function NetworkInterfaces() {
                 </div>
                 <div>
                   <Label htmlFor="device">物理设备</Label>
-                  <Input
-                    id="device"
+                  <Select
                     value={newInterface.device}
-                    onChange={(e) =>
-                      setNewInterface({ ...newInterface, device: e.target.value })
+                    onValueChange={(value) =>
+                      setNewInterface({ ...newInterface, device: value })
                     }
-                    placeholder="例如: eth1"
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择物理设备" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {physicalInterfacesData && physicalInterfacesData.length > 0 ? (
+                        physicalInterfacesData.map((iface: any) => (
+                          <SelectItem key={iface.name} value={iface.name}>
+                            {iface.name} ({iface.mac || 'No MAC'})
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          正在加载...
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               {newInterface.protocol === "static" && (

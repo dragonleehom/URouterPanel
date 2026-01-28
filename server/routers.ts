@@ -31,6 +31,9 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return await pythonAPI.getInterfaces();
     }),
+    listPhysical: publicProcedure.query(async () => {
+      return await pythonAPI.getPhysicalInterfaces();
+    }),
     get: publicProcedure
       .input(z.object({ name: z.string() }))
       .query(async ({ input }) => {
