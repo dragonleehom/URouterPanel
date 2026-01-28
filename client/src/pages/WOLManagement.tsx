@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Check, Edit, Monitor, Plus, Power, Trash2, Zap } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 
 interface WOLDevice {
   id: string;
@@ -127,8 +127,7 @@ export default function WOLManagement() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
@@ -348,6 +347,5 @@ export default function WOLManagement() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 }

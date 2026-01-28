@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Check, Copy, Edit, Link, Plus, Shield, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 
 interface MACFilterRule {
   id: string;
@@ -156,8 +156,7 @@ export default function MACManagement() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">MAC地址管理</h1>
@@ -542,6 +541,5 @@ export default function MACManagement() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 }

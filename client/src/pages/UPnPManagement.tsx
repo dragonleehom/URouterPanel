@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle, ExternalLink, Monitor, RefreshCw, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 
 interface PortMapping {
   id: string;
@@ -126,8 +126,7 @@ export default function UPnPManagement() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">UPnP/NAT-PMP服务</h1>
@@ -360,6 +359,5 @@ export default function UPnPManagement() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }

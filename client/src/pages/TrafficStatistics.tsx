@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Activity, ArrowDown, ArrowUp, BarChart3, Download, HardDrive, Monitor, RefreshCw, Wifi } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface DeviceTraffic {
@@ -155,8 +155,7 @@ export default function TrafficStatistics() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
@@ -463,6 +462,5 @@ export default function TrafficStatistics() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

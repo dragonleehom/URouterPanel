@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertCircle, Globe, Plus, Save, Shield, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 
 interface IPv6Address {
   id: string;
@@ -125,8 +125,7 @@ export default function IPv6Management() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">IPv6管理</h1>
@@ -617,6 +616,5 @@ export default function IPv6Management() {
           </TabsContent>
         </Tabs>
       </div>
-    </DashboardLayout>
   );
 }

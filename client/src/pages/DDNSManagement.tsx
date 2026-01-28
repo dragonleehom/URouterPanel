@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertCircle, CheckCircle, Clock, Globe, Plus, RefreshCw, Save, Trash2, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
+
 
 interface DDNSConfig {
   id: string;
@@ -146,8 +146,7 @@ export default function DDNSManagement() {
   };
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6">
         {/* 页面标题 */}
         <div className="flex items-center justify-between">
           <div>
@@ -361,6 +360,5 @@ export default function DDNSManagement() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
