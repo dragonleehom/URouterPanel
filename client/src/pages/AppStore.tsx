@@ -182,8 +182,21 @@ export default function AppStore() {
                 <Card key={app.id} className="hover:shadow-md transition-shadow">
                   <CardHeader>
                     <div className="flex items-start gap-3">
-                      <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <Package className="w-6 h-6 text-blue-600" />
+                      <div className="w-12 h-12 rounded-lg bg-white border flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {app.iconUrl ? (
+                          <img 
+                            src={app.iconUrl} 
+                            alt={app.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              // 图标加载失败时显示默认图标
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.parentElement!.innerHTML = '<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                            }}
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-blue-600" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <CardTitle className="text-lg">{app.name}</CardTitle>
@@ -280,8 +293,20 @@ export default function AppStore() {
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                          <Package className="w-6 h-6 text-blue-600" />
+                        <div className="w-12 h-12 rounded-lg bg-white border flex items-center justify-center overflow-hidden">
+                          {app.iconUrl ? (
+                            <img 
+                              src={app.iconUrl} 
+                              alt={app.appName}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.parentElement!.innerHTML = '<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>';
+                              }}
+                            />
+                          ) : (
+                            <Package className="w-6 h-6 text-blue-600" />
+                          )}
                         </div>
                         <div>
                           <h3 className="font-medium text-gray-900">{app.appKey}</h3>

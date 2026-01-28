@@ -191,12 +191,16 @@ async function syncApp(appKey: string): Promise<boolean> {
       .where(eq(appStoreApps.appKey, appKey))
       .limit(1);
 
+    // 获取应用logo URL
+    const logoUrl = `${APPSTORE_REPO}/${APPS_DIR}/${appKey}/logo.png`;
+    
     const appRecord = {
       appKey,
       name: appData.name,
       shortDesc: appData.shortDescZh,
       type: appData.type,
       tags: JSON.stringify(appData.tags),
+      iconUrl: logoUrl,
       website: appData.website || null,
       github: appData.github || null,
       document: appData.document || null,
