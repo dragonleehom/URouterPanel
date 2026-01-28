@@ -258,3 +258,11 @@
 - [x] 成功推送171个文件到GitHub (b16cd35)
 - [x] 验证GitHub上的frontend目录完整性
 - [ ] 在Ubuntu VM上测试部署脚本
+
+## 后端服务修复 (紧急)
+- [ ] 修复Python模块路径问题(ModuleNotFoundError: No module named 'backend')
+- [ ] 修复虚拟环境权限问题(venv所有者为root)
+- [ ] 更新systemd服务配置的WorkingDirectory
+- [ ] 更新systemd服务配置的ExecStart命令
+- [ ] 测试后端服务启动
+- [ ] 推送修复到GitHub
