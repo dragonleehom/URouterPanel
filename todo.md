@@ -1523,3 +1523,147 @@
 - [x] Home.tsx已连接tRPC API
 - [x] 无模拟数据(已使用真实数据)
 - [x] 历史数据采集和趋势图已实现
+
+
+## 接口配置功能完整重构(参考iStoreOS/OpenWrt)
+
+### 功能模块
+1. **全局配置**
+   - [ ] IPv6 ULA前缀配置
+   - [ ] 数据包引导(Packet Steering)
+   - [ ] 流量导向(RPS - Receive Packet Steering)
+
+2. **网口配置页签**
+   - [ ] WAN口管理(增删改查)
+   - [ ] LAN口管理(增删改查)
+   - [ ] 网口绑定物理接口
+
+3. **接口配置页签**
+   - [ ] 接口列表显示(LAN/WAN及其绑定的eth)
+   - [ ] 接口操作(重启/停止/删除/编辑)
+   - [ ] 接口状态呈现
+   - [ ] 协议配置(Static/DHCP/PPPoE等)
+   - [ ] 绑定设备(物理/虚拟端口)
+   - [ ] IPv4配置(IP地址/子网掩码/网关)
+   - [ ] IPv6配置(地址/前缀/网关)
+   - [ ] DNS配置
+   - [ ] 防火墙区域配置
+   - [ ] DHCP服务器配置
+
+4. **设备配置页签**
+   - [ ] 列举所有硬件和虚拟端口
+   - [ ] 显示设备类型(网络设备/网桥设备)
+   - [ ] 显示MAC地址、MTU大小
+   - [ ] 设备属性配置:
+     - [ ] 混杂模式(Promiscuous Mode)
+     - [ ] 多播支持(Multicast)
+     - [ ] ICMP重定向
+     - [ ] 其他网络设备标准属性
+
+### 数据库设计
+- [ ] 设计global_network_config表(全局配置)
+- [ ] 设计network_ports表(网口配置)
+- [ ] 设计network_interfaces表(接口配置)
+- [ ] 设计network_devices表(设备配置)
+
+### 后端实现
+- [ ] 创建networkConfigService(全局配置)
+- [ ] 创建networkPortService(网口管理)
+- [ ] 扩展networkInterfaceService(完整接口管理)
+- [ ] 创建networkDeviceService(设备管理)
+- [ ] 创建tRPC路由
+
+### 前端实现
+- [ ] 重构NetworkInterfaces页面为Tab布局
+- [ ] 实现全局配置UI
+- [ ] 实现网口配置UI
+- [ ] 实现接口配置UI(完整编辑表单)
+- [ ] 实现设备配置UI
+
+### 系统集成
+- [ ] 实现系统配置导入(读取/etc/network/interfaces等)
+- [ ] 实现默认配置创建(1个WAN + 1个LAN)
+- [ ] 自动分配物理接口(第一个eth给WAN,其余给LAN)
+- [ ] 配置持久化到系统
+
+
+## 网络接口配置重构 (对标iStoreOS) - 当前任务
+
+### 目标
+重构网络接口配置页面,参考iStoreOS实现4个标签页的完整网络配置系统
+
+### 后端开发 ✅
+- [x] 创建数据库Schema (4个表)
+  - [x] global_network_config - 全局配置(IPv6 ULA、包转向、RPS)
+  - [x] network_ports - 网口配置(WAN/LAN、协议、IP、DHCP服务器)
+  - [x] network_devices - 设备配置(MTU、混杂模式、多播、VLAN)
+  - [x] network_interface_config - 接口协议配置
+- [x] 创建networkConfigService.ts服务层
+  - [x] 全局配置管理(get/update)
+  - [x] 网口配置管理(list/get/create/update/delete/restart/stop)
+  - [x] 设备配置管理(list/get/update)
+  - [x] 系统设备扫描(scanSystemDevices)
+  - [x] 默认配置创建(createDefaultConfig - 1 WAN + 1 LAN)
+  - [x] 网络配置应用(applyNetworkPort - 调用Linux命令)
+- [x] 创建networkConfigRouter.ts tRPC路由
+  - [x] 全局配置API (2个端点)
+  - [x] 网口配置API (7个端点)
+  - [x] 设备配置API (3个端点)
+  - [x] 系统操作API (2个端点)
+- [x] 在routers.ts中注册networkConfig路由
+- [x] TypeScript编译通过
+
+### 前端开发 (待实现)
+- [ ] 重构NetworkInterfaces.tsx为4标签页布局
+  - [ ] 全局配置标签页
+    - [ ] IPv6 ULA前缀配置
+    - [ ] 包转向(Packet Steering)开关
+    - [ ] RPS(Receive Packet Steering)配置
+  - [ ] 网口配置标签页(WAN/LAN子标签)
+    - [ ] WAN口配置列表
+    - [ ] LAN口配置列表
+    - [ ] 添加/编辑网口对话框
+    - [ ] 协议配置(Static/DHCP/PPPoE)
+    - [ ] IPv4/IPv6配置
+    - [ ] DNS服务器配置
+    - [ ] 防火墙区域配置
+    - [ ] DHCP服务器配置
+  - [ ] 接口配置标签页
+    - [ ] 接口列表展示
+    - [ ] 接口详细配置
+    - [ ] 协议选择
+  - [ ] 设备配置标签页
+    - [ ] 物理设备列表
+    - [ ] MTU配置
+    - [ ] 混杂模式开关
+    - [ ] 多播开关
+    - [ ] ICMP重定向开关
+    - [ ] 发送队列长度
+    - [ ] IPv6 RA/RS配置
+    - [ ] IGMP Snooping配置
+    - [ ] 网桥端口配置
+    - [ ] VLAN配置
+- [ ] 集成tRPC API调用
+- [ ] 实现自动配置导入
+- [ ] 测试完整功能
+
+### 测试验证 (待完成)
+- [ ] 后端API测试
+  - [ ] 全局配置读写测试
+  - [ ] 网口CRUD操作测试
+  - [ ] 设备配置更新测试
+  - [ ] 系统设备扫描测试
+  - [ ] 默认配置创建测试
+- [ ] 前端UI测试
+  - [ ] 4个标签页切换测试
+  - [ ] 网口添加/编辑/删除测试
+  - [ ] 设备配置更新测试
+  - [ ] 实时数据刷新测试
+- [ ] 集成测试
+  - [ ] 配置应用到系统测试
+  - [ ] 网络重启测试
+  - [ ] 配置持久化测试
+
+### 当前进度
+**已完成**: 后端服务和API开发完成,TypeScript编译通过
+**下一步**: 重构前端页面,实现4标签页布局

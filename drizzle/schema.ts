@@ -186,3 +186,79 @@ export const natRules = mysqlTable("nat_rules", {
 
 export type NatRule = typeof natRules.$inferSelect;
 export type InsertNatRule = typeof natRules.$inferInsert;
+
+
+/**
+ * 全局网络配置表
+ * 存储系统级网络配置参数
+ */
+export const globalNetworkConfig = mysqlTable("global_network_config", {
+  id: int("id").autoincrement().primaryKey(),
+  ipv6UlaPrefix: varchar("ipv6UlaPrefix", { length: 50 }), // IPv6 ULA前缀(如fd00::/48)
+  packetSteering: int("packetSteering").default(0), // 数据包引导 0=disabled, 1=enabled
+  rpsEnabled: int("rpsEnabled").default(0), // RPS流量导向 0=disabled, 1=enabled
+  rpsCpus: varchar("rpsCpus", { length: 100 }), // RPS CPU掩码
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type GlobalNetworkConfig = typeof globalNetworkConfig.$inferSelect;
+export type InsertGlobalNetworkConfig = typeof globalNetworkConfig.$inferInsert;
+
+/**
+ * 网口配置表(WAN/LAN口)
+ * 存储逻辑网口配置
+ */
+export const networkPorts = mysqlTable("network_ports", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(), // 网口名称(如wan, lan)
+  type: mysqlEnum("type", ["wan", "lan"]).notNull(),
+  protocol: mysqlEnum("protocol", ["static", "dhcp", "pppoe"]).default("static").notNull(),
+  ifname: varchar("ifname", { length: 100 }), // 绑定的物理接口(如eth0,eth1)
+  ipaddr: varchar("ipaddr", { length: 50 }), // IPv4地址
+  netmask: varchar("netmask", { length: 50 }), // 子网掩码
+  gateway: varchar("gateway", { length: 50 }), // 网关
+  dns: text("dns"), // DNS服务器(JSON数组)
+  ipv6: int("ipv6").default(0), // IPv6启用 0=disabled, 1=enabled
+  ipv6addr: varchar("ipv6addr", { length: 100 }), // IPv6地址
+  ipv6gateway: varchar("ipv6gateway", { length: 100 }), // IPv6网关
+  mtu: int("mtu").default(1500), // MTU大小
+  metric: int("metric").default(0), // 路由优先级
+  firewallZone: varchar("firewallZone", { length: 50 }), // 防火墙区域
+  dhcpServer: int("dhcpServer").default(0), // DHCP服务器启用
+  dhcpStart: varchar("dhcpStart", { length: 50 }), // DHCP起始IP
+  dhcpEnd: varchar("dhcpEnd", { length: 50 }), // DHCP结束IP
+  dhcpTime: varchar("dhcpTime", { length: 20 }).default("12h"), // DHCP租约时间
+  enabled: int("enabled").default(1), // 启用状态
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NetworkPort = typeof networkPorts.$inferSelect;
+export type InsertNetworkPort = typeof networkPorts.$inferInsert;
+
+/**
+ * 网络设备配置表
+ * 存储物理和虚拟网络设备的详细配置
+ */
+export const networkDevices = mysqlTable("network_devices", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 50 }).notNull().unique(), // 设备名称(如eth0, br0)
+  type: mysqlEnum("type", ["ethernet", "bridge", "vlan", "wireless", "virtual"]).notNull(),
+  macaddr: varchar("macaddr", { length: 20 }), // MAC地址
+  mtu: int("mtu").default(1500), // MTU大小
+  promisc: int("promisc").default(0), // 混杂模式 0=disabled, 1=enabled
+  multicast: int("multicast").default(1), // 多播支持 0=disabled, 1=enabled
+  icmpRedirect: int("icmpRedirect").default(1), // ICMP重定向 0=disabled, 1=enabled
+  txqueuelen: int("txqueuelen").default(1000), // 发送队列长度
+  acceptRa: int("acceptRa").default(0), // 接受路由通告 0=disabled, 1=enabled
+  sendRs: int("sendRs").default(0), // 发送路由请求 0=disabled, 1=enabled
+  igmpSnooping: int("igmpSnooping").default(0), // IGMP侦听 0=disabled, 1=enabled
+  bridgePorts: text("bridgePorts"), // 网桥端口列表(JSON数组)
+  vlanId: int("vlanId"), // VLAN ID
+  parentDevice: varchar("parentDevice", { length: 50 }), // 父设备(用于VLAN)
+  enabled: int("enabled").default(1), // 启用状态
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NetworkDevice = typeof networkDevices.$inferSelect;
+export type InsertNetworkDevice = typeof networkDevices.$inferInsert;
