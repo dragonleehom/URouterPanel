@@ -419,3 +419,27 @@
 ### 当前进度
 **当前阶段**: 准备开始实现防火墙管理功能
 **下一步**: 实现防火墙管理的后端API并在沙箱测试
+
+
+## 前端页面重构 - 移除模拟数据集成真实API ✅
+
+### 无线网络管理页面重构 ✅
+- [x] 移除WirelessManagement.tsx中的所有模拟数据
+- [x] 集成wireless.getInterfaces API获取接口列表
+- [x] 集成wireless.getConfig API获取WiFi配置
+- [x] 集成wireless.configure API配置WiFi热点
+- [x] 集成wireless.getClients API获取客户端列表
+- [x] 集成wireless.disconnectClient API断开客户端
+- [x] 集成wireless.start/stop/restart API控制服务
+- [x] 实现完整的用户交互流程
+
+### QoS管理页面重构 ✅
+- [x] 移除QoSManagement.tsx中的所有模拟数据
+- [x] 集成qos.getConfig API获取QoS配置
+- [x] 集成qos.getRules API获取规则列表
+- [x] 集成qos.addRule API添加规则
+- [x] 集成qos.updateRule API更新规则
+- [x] 集成qos.deleteRule API删除规则
+- [x] 集成qos.toggleRule API切换规则状态
+- [x] 集成qos.enable/disable API启用/禁用QoS
+- [x] 实现完整的规则管理界面

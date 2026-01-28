@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Gauge, Plus, Trash2, Edit, TrendingUp, TrendingDown } from "lucide-react";
+import { Gauge, Plus, Trash2, Edit, RefreshCw, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -22,642 +22,615 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
-import { Progress } from "@/components/ui/progress";
-
-interface QoSRule {
-  id: string;
-  name: string;
-  enabled: boolean;
-  priority: "high" | "medium" | "low";
-  type: "ip" | "port" | "protocol" | "application";
-  target: string;
-  uploadLimit: number; // Mbps, 0 = unlimited
-  downloadLimit: number; // Mbps, 0 = unlimited
-  uploadMin: number; // Mbps, guaranteed bandwidth
-  downloadMin: number; // Mbps, guaranteed bandwidth
-}
-
-interface BandwidthStats {
-  interface: string;
-  upload: number;
-  download: number;
-  uploadMax: number;
-  downloadMax: number;
-}
+import { trpc } from "@/lib/trpc";
 
 export default function QoSManagement() {
-  const [qosEnabled, setQosEnabled] = useState(true);
-  const [rules, setRules] = useState<QoSRule[]>([
-    {
-      id: "1",
-      name: "视频会议优先",
-      enabled: true,
-      priority: "high",
-      type: "port",
-      target: "3478,8801-8810",
-      uploadLimit: 0,
-      downloadLimit: 0,
-      uploadMin: 2,
-      downloadMin: 5,
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false);
+  const [editingRule, setEditingRule] = useState<any>(null);
+
+  // 获取QoS配置
+  const { data: config, refetch: refetchConfig } = trpc.qos.getConfig.useQuery();
+
+  // 获取QoS规则列表
+  const { data: rules, isLoading: rulesLoading, refetch: refetchRules } = 
+    trpc.qos.getRules.useQuery();
+
+  // 获取QoS状态
+  const { data: status, refetch: refetchStatus } = trpc.qos.getStatus.useQuery();
+
+  // 启用QoS mutation
+  const enableQoSMutation = trpc.qos.enable.useMutation({
+    onSuccess: () => {
+      toast.success("QoS已启用");
+      refetchStatus();
+      refetchConfig();
     },
-    {
-      id: "2",
-      name: "游戏流量优先",
-      enabled: true,
-      priority: "high",
-      type: "protocol",
-      target: "UDP",
-      uploadLimit: 0,
-      downloadLimit: 0,
-      uploadMin: 1,
-      downloadMin: 3,
+    onError: (error) => {
+      toast.error(`启用失败: ${error.message}`);
     },
-    {
-      id: "3",
-      name: "下载限速",
-      enabled: true,
-      priority: "low",
-      type: "port",
-      target: "6881-6889",
-      uploadLimit: 10,
-      downloadLimit: 50,
-      uploadMin: 0,
-      downloadMin: 0,
+  });
+
+  // 禁用QoS mutation
+  const disableQoSMutation = trpc.qos.disable.useMutation({
+    onSuccess: () => {
+      toast.success("QoS已禁用");
+      refetchStatus();
+      refetchConfig();
     },
-  ]);
-
-  const [bandwidthStats] = useState<BandwidthStats[]>([
-    {
-      interface: "WAN",
-      upload: 45.2,
-      download: 123.5,
-      uploadMax: 100,
-      downloadMax: 500,
+    onError: (error) => {
+      toast.error(`禁用失败: ${error.message}`);
     },
-    {
-      interface: "LAN",
-      upload: 15.8,
-      download: 67.3,
-      uploadMax: 1000,
-      downloadMax: 1000,
+  });
+
+  // 配置QoS mutation
+  const configureQoSMutation = trpc.qos.configure.useMutation({
+    onSuccess: () => {
+      toast.success("QoS配置已保存");
+      refetchConfig();
     },
-  ]);
+    onError: (error) => {
+      toast.error(`配置失败: ${error.message}`);
+    },
+  });
 
-  const [editingRule, setEditingRule] = useState<QoSRule | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [uploadBandwidth, setUploadBandwidth] = useState(100);
-  const [downloadBandwidth, setDownloadBandwidth] = useState(500);
+  // 添加规则mutation
+  const addRuleMutation = trpc.qos.addRule.useMutation({
+    onSuccess: () => {
+      toast.success("规则添加成功");
+      refetchRules();
+      refetchStatus();
+      setRuleDialogOpen(false);
+      setEditingRule(null);
+    },
+    onError: (error) => {
+      toast.error(`添加失败: ${error.message}`);
+    },
+  });
 
-  const handleToggleQoS = () => {
-    setQosEnabled(!qosEnabled);
-    toast.success(qosEnabled ? "QoS已禁用" : "QoS已启用");
-  };
+  // 更新规则mutation
+  const updateRuleMutation = trpc.qos.updateRule.useMutation({
+    onSuccess: () => {
+      toast.success("规则更新成功");
+      refetchRules();
+      setRuleDialogOpen(false);
+      setEditingRule(null);
+    },
+    onError: (error) => {
+      toast.error(`更新失败: ${error.message}`);
+    },
+  });
 
-  const handleToggleRule = (id: string) => {
-    setRules(
-      rules.map((rule) =>
-        rule.id === id ? { ...rule, enabled: !rule.enabled } : rule
-      )
-    );
-    toast.success("规则状态已更新");
-  };
+  // 删除规则mutation
+  const deleteRuleMutation = trpc.qos.deleteRule.useMutation({
+    onSuccess: () => {
+      toast.success("规则删除成功");
+      refetchRules();
+      refetchStatus();
+    },
+    onError: (error) => {
+      toast.error(`删除失败: ${error.message}`);
+    },
+  });
 
-  const handleEditRule = (rule: QoSRule) => {
-    setEditingRule({ ...rule });
-    setIsDialogOpen(true);
-  };
+  // 切换规则状态mutation
+  const toggleRuleMutation = trpc.qos.toggleRule.useMutation({
+    onSuccess: () => {
+      toast.success("规则状态已更新");
+      refetchRules();
+    },
+    onError: (error) => {
+      toast.error(`切换失败: ${error.message}`);
+    },
+  });
 
-  const handleSaveRule = () => {
-    if (!editingRule) return;
+  // 规则表单状态
+  const [formData, setFormData] = useState({
+    name: "",
+    interface: "eth0",
+    direction: "upload",
+    protocol: "",
+    src_ip: "",
+    dst_ip: "",
+    src_port: "",
+    dst_port: "",
+    priority: 3,
+    min_bandwidth: "",
+    max_bandwidth: "",
+  });
 
-    if (!editingRule.name.trim()) {
-      toast.error("规则名称不能为空");
-      return;
-    }
-
-    if (!editingRule.target.trim()) {
-      toast.error("目标不能为空");
-      return;
-    }
-
-    if (rules.find((r) => r.id === editingRule.id)) {
-      setRules(rules.map((r) => (r.id === editingRule.id ? editingRule : r)));
-    } else {
-      setRules([...rules, { ...editingRule, id: Date.now().toString() }]);
-    }
-
-    setIsDialogOpen(false);
-    setEditingRule(null);
-    toast.success("QoS规则已保存");
-  };
-
+  // 打开添加规则对话框
   const handleAddRule = () => {
-    const newRule: QoSRule = {
-      id: Date.now().toString(),
-      name: "新规则",
-      enabled: true,
-      priority: "medium",
-      type: "ip",
-      target: "",
-      uploadLimit: 0,
-      downloadLimit: 0,
-      uploadMin: 0,
-      downloadMin: 0,
+    setEditingRule(null);
+    setFormData({
+      name: "",
+      interface: "eth0",
+      direction: "upload",
+      protocol: "",
+      src_ip: "",
+      dst_ip: "",
+      src_port: "",
+      dst_port: "",
+      priority: 3,
+      min_bandwidth: "",
+      max_bandwidth: "",
+    });
+    setRuleDialogOpen(true);
+  };
+
+  // 打开编辑规则对话框
+  const handleEditRule = (rule: any) => {
+    setEditingRule(rule);
+    setFormData({
+      name: rule.name || "",
+      interface: rule.interface || "eth0",
+      direction: rule.direction || "upload",
+      protocol: rule.protocol || "",
+      src_ip: rule.src_ip || "",
+      dst_ip: rule.dst_ip || "",
+      src_port: rule.src_port?.toString() || "",
+      dst_port: rule.dst_port?.toString() || "",
+      priority: rule.priority || 3,
+      min_bandwidth: rule.min_bandwidth?.toString() || "",
+      max_bandwidth: rule.max_bandwidth?.toString() || "",
+    });
+    setRuleDialogOpen(true);
+  };
+
+  // 提交规则
+  const handleSubmitRule = () => {
+    if (!formData.name) {
+      toast.error("请输入规则名称");
+      return;
+    }
+
+    const ruleData = {
+      name: formData.name,
+      interface: formData.interface,
+      direction: formData.direction,
+      protocol: formData.protocol || null,
+      src_ip: formData.src_ip || null,
+      dst_ip: formData.dst_ip || null,
+      src_port: formData.src_port ? parseInt(formData.src_port) : null,
+      dst_port: formData.dst_port ? parseInt(formData.dst_port) : null,
+      priority: formData.priority,
+      min_bandwidth: formData.min_bandwidth ? parseInt(formData.min_bandwidth) : null,
+      max_bandwidth: formData.max_bandwidth ? parseInt(formData.max_bandwidth) : null,
     };
-    setEditingRule(newRule);
-    setIsDialogOpen(true);
-  };
 
-  const handleDeleteRule = (id: string) => {
-    setRules(rules.filter((rule) => rule.id !== id));
-    toast.success("QoS规则已删除");
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-700";
-      case "medium":
-        return "bg-yellow-100 text-yellow-700";
-      case "low":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+    if (editingRule) {
+      updateRuleMutation.mutate({
+        ruleId: editingRule.id,
+        rule: ruleData,
+      });
+    } else {
+      addRuleMutation.mutate(ruleData);
     }
   };
 
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "高优先级";
-      case "medium":
-        return "中优先级";
-      case "low":
-        return "低优先级";
-      default:
-        return "未知";
+  // 删除规则
+  const handleDeleteRule = (ruleId: string) => {
+    if (confirm("确定要删除此规则吗?")) {
+      deleteRuleMutation.mutate({ ruleId });
     }
   };
 
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case "ip":
-        return "IP地址";
-      case "port":
-        return "端口";
-      case "protocol":
-        return "协议";
-      case "application":
-        return "应用";
-      default:
-        return "未知";
+  // 切换规则状态
+  const handleToggleRule = (ruleId: string) => {
+    toggleRuleMutation.mutate({ ruleId });
+  };
+
+  // 配置表单状态
+  const [configFormData, setConfigFormData] = useState({
+    upload_bandwidth: "",
+    download_bandwidth: "",
+    default_priority: 3,
+  });
+
+  // 加载配置到表单
+  const loadConfigToForm = () => {
+    if (config) {
+      setConfigFormData({
+        upload_bandwidth: config.upload_bandwidth?.toString() || "",
+        download_bandwidth: config.download_bandwidth?.toString() || "",
+        default_priority: config.default_priority || 3,
+      });
     }
   };
+
+  // 保存配置
+  const handleSaveConfig = () => {
+    if (!configFormData.upload_bandwidth || !configFormData.download_bandwidth) {
+      toast.error("请输入上传和下载带宽");
+      return;
+    }
+
+    configureQoSMutation.mutate({
+      upload_bandwidth: parseInt(configFormData.upload_bandwidth),
+      download_bandwidth: parseInt(configFormData.download_bandwidth),
+      default_priority: configFormData.default_priority,
+    });
+  };
+
+  if (rulesLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p>加载中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Gauge className="w-6 h-6" />
-            QoS流量控制
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            管理带宽分配、流量优先级和限速规则
+          <h1 className="text-3xl font-bold">QoS流量控制</h1>
+          <p className="text-muted-foreground mt-1">
+            管理带宽限制和流量优先级
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Label>QoS总开关</Label>
-            <Switch checked={qosEnabled} onCheckedChange={handleToggleQoS} />
-          </div>
-          <Button onClick={handleAddRule} disabled={!qosEnabled}>
-            <Plus className="w-4 h-4 mr-2" />
-            添加规则
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetchConfig();
+              refetchRules();
+              refetchStatus();
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            刷新
           </Button>
+          {status?.enabled ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => disableQoSMutation.mutate()}
+              disabled={disableQoSMutation.isPending}
+            >
+              <PowerOff className="w-4 h-4 mr-2" />
+              禁用QoS
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => enableQoSMutation.mutate()}
+              disabled={enableQoSMutation.isPending}
+            >
+              <Power className="w-4 h-4 mr-2" />
+              启用QoS
+            </Button>
+          )}
         </div>
+      </div>
+
+      {/* 状态卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <Gauge className="w-8 h-8 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">QoS状态</p>
+              <p className="text-2xl font-bold">
+                {status?.enabled ? "已启用" : "已禁用"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">规则总数</p>
+            <p className="text-2xl font-bold">{status?.rule_count || 0}</p>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">活跃规则</p>
+            <p className="text-2xl font-bold">{status?.active_rule_count || 0}</p>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">配置状态</p>
+            <p className="text-2xl font-bold">
+              {status?.configured ? "已配置" : "未配置"}
+            </p>
+          </div>
+        </Card>
       </div>
 
       <Tabs defaultValue="rules" className="space-y-4">
         <TabsList>
           <TabsTrigger value="rules">QoS规则</TabsTrigger>
-          <TabsTrigger value="bandwidth">带宽监控</TabsTrigger>
-          <TabsTrigger value="settings">全局设置</TabsTrigger>
+          <TabsTrigger value="config">全局配置</TabsTrigger>
         </TabsList>
 
+        {/* QoS规则标签页 */}
         <TabsContent value="rules" className="space-y-4">
-          {!qosEnabled && (
-            <Card className="p-4 bg-yellow-50 border-yellow-200">
-              <p className="text-sm text-yellow-800">
-                QoS功能已禁用,规则不会生效。请在右上角启用QoS总开关。
-              </p>
-            </Card>
-          )}
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">规则列表</h3>
+            <Button onClick={handleAddRule}>
+              <Plus className="w-4 h-4 mr-2" />
+              添加规则
+            </Button>
+          </div>
 
-          {rules.map((rule) => (
-            <Card key={rule.id} className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Gauge
-                      className={`w-5 h-5 ${
-                        rule.enabled && qosEnabled
-                          ? "text-blue-600"
-                          : "text-gray-400"
-                      }`}
-                    />
-                    <div>
-                      <h3 className="text-lg font-medium">{rule.name}</h3>
-                      <p className="text-sm text-gray-500">
-                        {getTypeText(rule.type)}: {rule.target}
-                      </p>
+          <div className="space-y-2">
+            {rules && rules.length > 0 ? (
+              rules.map((rule: any) => (
+                <Card key={rule.id} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <Switch
+                          checked={rule.enabled}
+                          onCheckedChange={() => handleToggleRule(rule.id)}
+                        />
+                        <div>
+                          <p className="font-medium">{rule.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {rule.interface} | {rule.direction} | 优先级: {rule.priority}
+                            {rule.max_bandwidth && ` | 最大带宽: ${rule.max_bandwidth}kbps`}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded ${getPriorityColor(rule.priority)}`}>
-                      {getPriorityText(rule.priority)}
-                    </span>
-                    <span
-                      className={`px-2 py-1 text-xs rounded ${
-                        rule.enabled
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-700"
-                      }`}
-                    >
-                      {rule.enabled ? "已启用" : "已禁用"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-gray-500 flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4" />
-                        上传限制
-                      </p>
-                      <p className="font-medium">
-                        {rule.uploadLimit === 0 ? "无限制" : `${rule.uploadLimit} Mbps`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500 flex items-center gap-1">
-                        <TrendingDown className="w-4 h-4" />
-                        下载限制
-                      </p>
-                      <p className="font-medium">
-                        {rule.downloadLimit === 0
-                          ? "无限制"
-                          : `${rule.downloadLimit} Mbps`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">保证上传</p>
-                      <p className="font-medium">
-                        {rule.uploadMin === 0 ? "无保证" : `${rule.uploadMin} Mbps`}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">保证下载</p>
-                      <p className="font-medium">
-                        {rule.downloadMin === 0 ? "无保证" : `${rule.downloadMin} Mbps`}
-                      </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditRule(rule)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteRule(rule.id)}
+                        disabled={deleteRuleMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 ml-4">
-                  <Switch
-                    checked={rule.enabled}
-                    onCheckedChange={() => handleToggleRule(rule.id)}
-                    disabled={!qosEnabled}
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditRule(rule)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeleteRule(rule.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          ))}
-
-          {rules.length === 0 && (
-            <Card className="p-12 text-center">
-              <Gauge className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500 mb-4">暂无QoS规则</p>
-              <Button onClick={handleAddRule} disabled={!qosEnabled}>
-                <Plus className="w-4 h-4 mr-2" />
-                添加第一条规则
-              </Button>
-            </Card>
-          )}
+                </Card>
+              ))
+            ) : (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">暂无QoS规则</p>
+                <Button className="mt-4" onClick={handleAddRule}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  添加第一条规则
+                </Button>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="bandwidth" className="space-y-4">
-          {bandwidthStats.map((stat, index) => (
-            <Card key={index} className="p-6">
-              <h3 className="text-lg font-medium mb-4">{stat.interface} 接口</h3>
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium">上传速率</span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {stat.upload.toFixed(1)} / {stat.uploadMax} Mbps
-                    </span>
-                  </div>
-                  <Progress
-                    value={(stat.upload / stat.uploadMax) * 100}
-                    className="h-3"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <TrendingDown className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium">下载速率</span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {stat.download.toFixed(1)} / {stat.downloadMax} Mbps
-                    </span>
-                  </div>
-                  <Progress
-                    value={(stat.download / stat.downloadMax) * 100}
-                    className="h-3"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                  <div>
-                    <p className="text-sm text-gray-500">上传利用率</p>
-                    <p className="text-2xl font-semibold text-blue-600">
-                      {((stat.upload / stat.uploadMax) * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">下载利用率</p>
-                    <p className="text-2xl font-semibold text-green-600">
-                      {((stat.download / stat.downloadMax) * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4">
+        {/* 全局配置标签页 */}
+        <TabsContent value="config" className="space-y-4">
           <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">带宽设置</h3>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label>上传带宽: {uploadBandwidth} Mbps</Label>
-                <Slider
-                  value={[uploadBandwidth]}
-                  onValueChange={(value) => setUploadBandwidth(value[0] || 100)}
-                  min={1}
-                  max={1000}
-                  step={1}
-                />
-                <p className="text-xs text-gray-500">
-                  设置WAN口的总上传带宽,用于QoS计算
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>下载带宽: {downloadBandwidth} Mbps</Label>
-                <Slider
-                  value={[downloadBandwidth]}
-                  onValueChange={(value) => setDownloadBandwidth(value[0] || 500)}
-                  min={1}
-                  max={1000}
-                  step={1}
-                />
-                <p className="text-xs text-gray-500">
-                  设置WAN口的总下载带宽,用于QoS计算
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-medium mb-4">QoS算法</h3>
+            <h3 className="text-lg font-semibold mb-4">带宽配置</h3>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>队列调度算法</Label>
-                <Select defaultValue="htb">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="htb">HTB (Hierarchical Token Bucket)</SelectItem>
-                    <SelectItem value="hfsc">HFSC (Hierarchical Fair Service Curve)</SelectItem>
-                    <SelectItem value="fq_codel">fq_codel (Fair Queue CoDel)</SelectItem>
-                    <SelectItem value="cake">CAKE (Common Applications Kept Enhanced)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">
-                  HTB适合大多数场景,CAKE对游戏和实时应用更友好
-                </p>
+              <div>
+                <Label>上传带宽 (kbps)</Label>
+                <Input
+                  type="number"
+                  value={configFormData.upload_bandwidth}
+                  onChange={(e) =>
+                    setConfigFormData({
+                      ...configFormData,
+                      upload_bandwidth: e.target.value,
+                    })
+                  }
+                  placeholder={config?.upload_bandwidth?.toString() || "10000"}
+                />
               </div>
-
-              <div className="flex items-center justify-between p-4 border rounded">
-                <div>
-                  <p className="font-medium">智能QoS</p>
-                  <p className="text-sm text-gray-500">
-                    自动识别应用类型并分配优先级
-                  </p>
-                </div>
-                <Switch defaultChecked />
+              <div>
+                <Label>下载带宽 (kbps)</Label>
+                <Input
+                  type="number"
+                  value={configFormData.download_bandwidth}
+                  onChange={(e) =>
+                    setConfigFormData({
+                      ...configFormData,
+                      download_bandwidth: e.target.value,
+                    })
+                  }
+                  placeholder={config?.download_bandwidth?.toString() || "100000"}
+                />
               </div>
-
-              <div className="flex items-center justify-between p-4 border rounded">
-                <div>
-                  <p className="font-medium">游戏加速</p>
-                  <p className="text-sm text-gray-500">
-                    自动优化游戏流量,降低延迟
-                  </p>
-                </div>
-                <Switch defaultChecked />
+              <div>
+                <Label>默认优先级 (1-5)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={configFormData.default_priority}
+                  onChange={(e) =>
+                    setConfigFormData({
+                      ...configFormData,
+                      default_priority: parseInt(e.target.value) || 3,
+                    })
+                  }
+                />
               </div>
-
-              <Button>保存设置</Button>
+              <Button
+                onClick={handleSaveConfig}
+                disabled={configureQoSMutation.isPending}
+              >
+                {configureQoSMutation.isPending ? "保存中..." : "保存配置"}
+              </Button>
             </div>
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* 编辑规则对话框 */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      {/* 规则对话框 */}
+      <Dialog open={ruleDialogOpen} onOpenChange={setRuleDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {editingRule?.id && rules.find((r) => r.id === editingRule.id)
-                ? "编辑QoS规则"
-                : "添加QoS规则"}
-            </DialogTitle>
+            <DialogTitle>{editingRule ? "编辑规则" : "添加规则"}</DialogTitle>
             <DialogDescription>
-              配置流量控制规则的优先级、目标和带宽限制
+              配置QoS流量控制规则
             </DialogDescription>
           </DialogHeader>
-
-          {editingRule && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>规则名称</Label>
-                  <Input
-                    value={editingRule.name}
-                    onChange={(e) =>
-                      setEditingRule({ ...editingRule, name: e.target.value })
-                    }
-                    placeholder="例如: 视频会议优先"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>优先级</Label>
-                  <Select
-                    value={editingRule.priority}
-                    onValueChange={(value: "high" | "medium" | "low") =>
-                      setEditingRule({ ...editingRule, priority: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">高优先级</SelectItem>
-                      <SelectItem value="medium">中优先级</SelectItem>
-                      <SelectItem value="low">低优先级</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>匹配类型</Label>
-                  <Select
-                    value={editingRule.type}
-                    onValueChange={(value: "ip" | "port" | "protocol" | "application") =>
-                      setEditingRule({ ...editingRule, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ip">IP地址</SelectItem>
-                      <SelectItem value="port">端口</SelectItem>
-                      <SelectItem value="protocol">协议</SelectItem>
-                      <SelectItem value="application">应用</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <Label>目标</Label>
-                  <Input
-                    value={editingRule.target}
-                    onChange={(e) =>
-                      setEditingRule({ ...editingRule, target: e.target.value })
-                    }
-                    placeholder={
-                      editingRule.type === "ip"
-                        ? "例如: 192.168.1.100"
-                        : editingRule.type === "port"
-                        ? "例如: 80,443,8000-9000"
-                        : editingRule.type === "protocol"
-                        ? "例如: TCP, UDP, ICMP"
-                        : "例如: zoom, teams, discord"
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>上传限速 (Mbps, 0=无限制)</Label>
-                  <Input
-                    type="number"
-                    value={editingRule.uploadLimit}
-                    onChange={(e) =>
-                      setEditingRule({
-                        ...editingRule,
-                        uploadLimit: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>下载限速 (Mbps, 0=无限制)</Label>
-                  <Input
-                    type="number"
-                    value={editingRule.downloadLimit}
-                    onChange={(e) =>
-                      setEditingRule({
-                        ...editingRule,
-                        downloadLimit: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>保证上传 (Mbps, 0=无保证)</Label>
-                  <Input
-                    type="number"
-                    value={editingRule.uploadMin}
-                    onChange={(e) =>
-                      setEditingRule({
-                        ...editingRule,
-                        uploadMin: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min="0"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>保证下载 (Mbps, 0=无保证)</Label>
-                  <Input
-                    type="number"
-                    value={editingRule.downloadMin}
-                    onChange={(e) =>
-                      setEditingRule({
-                        ...editingRule,
-                        downloadMin: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    min="0"
-                  />
-                </div>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <div>
+              <Label htmlFor="name">规则名称 *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="例如: 视频会议优先"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="interface">接口</Label>
+                <Input
+                  id="interface"
+                  value={formData.interface}
+                  onChange={(e) => setFormData({ ...formData, interface: e.target.value })}
+                  placeholder="eth0"
+                />
               </div>
-
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded">
-                <p className="text-sm text-blue-800">
-                  <strong>提示:</strong> 保证带宽是在网络拥塞时为该规则保留的最小带宽,
-                  限速是该规则可使用的最大带宽。合理配置可以确保关键应用的流畅运行。
-                </p>
+              <div>
+                <Label htmlFor="direction">方向</Label>
+                <Select
+                  value={formData.direction}
+                  onValueChange={(value) => setFormData({ ...formData, direction: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="upload">上传</SelectItem>
+                    <SelectItem value="download">下载</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
-
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="protocol">协议</Label>
+                <Select
+                  value={formData.protocol}
+                  onValueChange={(value) => setFormData({ ...formData, protocol: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="不限制" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">不限制</SelectItem>
+                    <SelectItem value="tcp">TCP</SelectItem>
+                    <SelectItem value="udp">UDP</SelectItem>
+                    <SelectItem value="icmp">ICMP</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="priority">优先级 (1最高-5最低)</Label>
+                <Input
+                  id="priority"
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={formData.priority}
+                  onChange={(e) =>
+                    setFormData({ ...formData, priority: parseInt(e.target.value) || 3 })
+                  }
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="src_ip">源IP地址</Label>
+                <Input
+                  id="src_ip"
+                  value={formData.src_ip}
+                  onChange={(e) => setFormData({ ...formData, src_ip: e.target.value })}
+                  placeholder="例如: 192.168.1.100"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dst_ip">目标IP地址</Label>
+                <Input
+                  id="dst_ip"
+                  value={formData.dst_ip}
+                  onChange={(e) => setFormData({ ...formData, dst_ip: e.target.value })}
+                  placeholder="例如: 8.8.8.8"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="src_port">源端口</Label>
+                <Input
+                  id="src_port"
+                  value={formData.src_port}
+                  onChange={(e) => setFormData({ ...formData, src_port: e.target.value })}
+                  placeholder="例如: 80"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dst_port">目标端口</Label>
+                <Input
+                  id="dst_port"
+                  value={formData.dst_port}
+                  onChange={(e) => setFormData({ ...formData, dst_port: e.target.value })}
+                  placeholder="例如: 443"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="min_bandwidth">最小带宽 (kbps)</Label>
+                <Input
+                  id="min_bandwidth"
+                  type="number"
+                  value={formData.min_bandwidth}
+                  onChange={(e) =>
+                    setFormData({ ...formData, min_bandwidth: e.target.value })
+                  }
+                  placeholder="保证带宽"
+                />
+              </div>
+              <div>
+                <Label htmlFor="max_bandwidth">最大带宽 (kbps)</Label>
+                <Input
+                  id="max_bandwidth"
+                  type="number"
+                  value={formData.max_bandwidth}
+                  onChange={(e) =>
+                    setFormData({ ...formData, max_bandwidth: e.target.value })
+                  }
+                  placeholder="限制带宽"
+                />
+              </div>
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRuleDialogOpen(false);
+                setEditingRule(null);
+              }}
+            >
               取消
             </Button>
-            <Button onClick={handleSaveRule}>保存</Button>
+            <Button
+              onClick={handleSubmitRule}
+              disabled={addRuleMutation.isPending || updateRuleMutation.isPending}
+            >
+              {addRuleMutation.isPending || updateRuleMutation.isPending
+                ? "保存中..."
+                : "保存"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
