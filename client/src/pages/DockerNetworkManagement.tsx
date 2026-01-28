@@ -25,7 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { Network, Plus, Trash2, Info, RefreshCw } from "lucide-react";
+import { Network, Plus, Trash2, Info, RefreshCw, GitBranch } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import NetworkTopology from "@/components/NetworkTopology";
 
 export default function DockerNetworkManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -145,54 +147,68 @@ export default function DockerNetworkManagement() {
         </div>
       </div>
 
-      {/* 统计卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
+      {/* 标签页 */}
+      <Tabs defaultValue="list" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="list">
+            <Network className="w-4 h-4 mr-2" />
+            网络列表
+          </TabsTrigger>
+          <TabsTrigger value="topology">
+            <GitBranch className="w-4 h-4 mr-2" />
+            拓扑视图
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="space-y-4">
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
               总网络数
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">{networks?.length || 0}</div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold">{networks?.length || 0}</div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+            <Card>
+              <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
               Bridge网络
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {networks?.filter((n) => n.driver === "bridge").length || 0}
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold">
+                  {networks?.filter((n) => n.driver === "bridge").length || 0}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+            <Card>
+              <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500">
               自定义网络
             </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">
-              {networks?.filter((n) => !["bridge", "host", "none"].includes(n.name)).length || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-semibold">
+                  {networks?.filter((n) => !["bridge", "host", "none"].includes(n.name)).length || 0}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* 网络列表 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>网络列表</CardTitle>
-          <CardDescription>查看和管理所有Docker网络</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+          {/* 网络列表 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>网络列表</CardTitle>
+              <CardDescription>查看和管理所有Docker网络</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
             {networks && networks.length > 0 ? (
               networks.map((network) => (
                 <div
@@ -249,8 +265,14 @@ export default function DockerNetworkManagement() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="topology">
+          <NetworkTopology />
+        </TabsContent>
+      </Tabs>
 
       {/* 创建网络对话框 */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>

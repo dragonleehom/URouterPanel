@@ -153,4 +153,80 @@ export const networkRouter = router({
         });
       }
     }),
+
+  /**
+   * 获取网络拓扑数据
+   * 返回网络和容器的节点及连接关系
+   */
+  topology: protectedProcedure.query(async () => {
+    try {
+      const networks = await listNetworks();
+      const { listContainers } = await import("./dockerService");
+      const containers = await listContainers();
+
+      // 构建节点数据
+      const nodes: Array<{
+        id: string;
+        type: "network" | "container";
+        label: string;
+        data: any;
+      }> = [];
+
+      // 构建边数据(连接关系)
+      const edges: Array<{
+        id: string;
+        source: string;
+        target: string;
+      }> = [];
+
+      // 添加网络节点
+      networks.forEach((network) => {
+        nodes.push({
+          id: `network-${network.id}`,
+          type: "network",
+          label: network.name,
+          data: {
+            driver: network.driver,
+            scope: network.scope,
+            internal: network.internal,
+          },
+        });
+
+        // 添加容器到网络的连接
+        if (network.containers) {
+          network.containers.forEach((containerId) => {
+            edges.push({
+              id: `edge-${network.id}-${containerId}`,
+              source: `network-${network.id}`,
+              target: `container-${containerId}`,
+            });
+          });
+        }
+      });
+
+      // 添加容器节点
+      containers.forEach((container) => {
+        nodes.push({
+          id: `container-${container.id}`,
+          type: "container",
+          label: container.name,
+          data: {
+            image: container.image,
+            status: container.status,
+            ports: container.ports,
+          },
+        });
+      });
+
+      return {
+        nodes,
+        edges,
+      };
+    } catch (error: any) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `获取网络拓扑失败: ${error.message}`,
+      });
+    }
+  }),
 });
