@@ -1499,3 +1499,12 @@
 - [x] 检查VirtualNetworkManagement.tsx页面文件是否存在
 - [x] 修复路由路径(/virtual-network -> /virtual-networks)
 - [x] 测试虚拟网络页面访问
+
+
+## 虚拟网络页面不显示系统虚拟设备问题
+
+- [x] 分析VirtualNetworkManagement.tsx的数据源
+- [x] 检查virtualNetworkRouter返回的数据
+- [x] 修改虚拟网络服务包含docker0等系统虚拟网桥
+- [x] 区分用户创建的虚拟网络和系统虚拟设备(isSystemBridge标记)
+- [x] 测试虚拟网络页面显示docker0

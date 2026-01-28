@@ -315,3 +315,126 @@ export function isValidCIDR(cidr: string): boolean {
     /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/(3[0-2]|[12]?[0-9])$/;
   return pattern.test(cidr);
 }
+
+
+/**
+ * 列出系统中所有的网桥设备
+ */
+export async function listBridges(): Promise<Array<{
+  name: string;
+  state: string;
+  type: string;
+  mtu: number;
+  addresses: string[];
+}>> {
+  try {
+    // 使用ip link show type bridge列出所有网桥
+    const { stdout } = await execAsync('ip link show type bridge');
+    const bridges: Array<{
+      name: string;
+      state: string;
+      type: string;
+      mtu: number;
+      addresses: string[];
+    }> = [];
+    
+    // 解析输出
+    const lines = stdout.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // 匹配类似: 3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default
+      const match = line.match(/^\d+:\s+(\S+):\s+<([^>]+)>\s+mtu\s+(\d+).*state\s+(\S+)/);
+      if (match) {
+        const bridgeName = match[1];
+        const state = match[4];
+        const mtu = parseInt(match[3]);
+        
+        // 获取IP地址
+        let addresses: string[] = [];
+        try {
+          const { stdout: addrOutput } = await execAsync(`ip addr show ${bridgeName}`);
+          const addrMatches = addrOutput.match(/inet6?\s+([^\s]+)/g);
+          if (addrMatches) {
+            addresses = addrMatches.map(m => m.replace(/inet6?\s+/, ''));
+          }
+        } catch (e) {
+          // 忽略获取地址失败
+        }
+        
+        bridges.push({
+          name: bridgeName,
+          state: state.toLowerCase(),
+          type: 'bridge',
+          mtu,
+          addresses,
+        });
+      }
+    }
+    
+    return bridges;
+  } catch (error: any) {
+    console.error('Failed to list bridges:', error.message);
+    return [];
+  }
+}
+
+/**
+ * 获取网桥的详细信息
+ */
+export async function getBridgeInfo(bridgeName: string): Promise<{
+  name: string;
+  state: string;
+  mtu: number;
+  addresses: string[];
+  interfaces: string[];
+} | null> {
+  try {
+    // 获取基本信息
+    const { stdout } = await execAsync(`ip link show ${bridgeName}`);
+    const match = stdout.match(/mtu\s+(\d+).*state\s+(\S+)/);
+    if (!match) return null;
+    
+    const mtu = parseInt(match[1]);
+    const state = match[2].toLowerCase();
+    
+    // 获取IP地址
+    let addresses: string[] = [];
+    try {
+      const { stdout: addrOutput } = await execAsync(`ip addr show ${bridgeName}`);
+      const addrMatches = addrOutput.match(/inet6?\s+([^\s]+)/g);
+      if (addrMatches) {
+        addresses = addrMatches.map(m => m.replace(/inet6?\s+/, ''));
+      }
+    } catch (e) {
+      // 忽略
+    }
+    
+    // 获取连接的接口
+    let interfaces: string[] = [];
+    try {
+      const { stdout: brOutput } = await execAsync(`ip link show master ${bridgeName}`);
+      const lines = brOutput.split('\n');
+      for (const line of lines) {
+        const ifMatch = line.match(/^\d+:\s+(\S+):/);
+        if (ifMatch) {
+          interfaces.push(ifMatch[1]);
+        }
+      }
+    } catch (e) {
+      // 忽略
+    }
+    
+    return {
+      name: bridgeName,
+      state,
+      mtu,
+      addresses,
+      interfaces,
+    };
+  } catch (error: any) {
+    console.error(`Failed to get bridge info for ${bridgeName}:`, error.message);
+    return null;
+  }
+}

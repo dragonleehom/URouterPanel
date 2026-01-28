@@ -20,13 +20,47 @@ import * as trafficMonitor from "./networkTrafficMonitor";
 
 export const virtualNetworkRouter = router({
   /**
-   * 列出所有虚拟网络
+   * 列出所有虚拟网络(包括数据库中的和系统中的)
    */
   list: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
-    const networks = await db.select().from(virtualNetworks);
-    return networks;
+    
+    // 获取数据库中的虚拟网络
+    const dbNetworks = await db.select().from(virtualNetworks);
+    
+    // 获取系统中的网桥设备
+    const systemBridges = await networkManager.listBridges();
+    
+    // 合并结果,标记系统网桥
+    const dbBridgeNames = new Set(dbNetworks.map(n => n.bridgeName));
+    const systemOnlyBridges = systemBridges
+      .filter(b => !dbBridgeNames.has(b.name))
+      .map(b => ({
+        id: -1, // 系统网桥使用负数ID
+        name: b.name,
+        description: `系统网桥 (${b.state})`,
+        type: 'bridge' as const,
+        subnet: b.addresses[0] || '',
+        gateway: b.addresses[0]?.split('/')[0] || '',
+        bridgeName: b.name,
+        vlanId: null,
+        dhcpEnabled: false,
+        dhcpRange: null,
+        dnsServers: null,
+        status: b.state,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isSystemBridge: true, // 标记为系统网桥
+      }));
+    
+    // 合并并标记数据库网络
+    const allNetworks = [
+      ...dbNetworks.map(n => ({ ...n, isSystemBridge: false })),
+      ...systemOnlyBridges,
+    ];
+    
+    return allNetworks;
   }),
 
   /**
