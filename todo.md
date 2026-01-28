@@ -1439,3 +1439,26 @@
 - [x] 检查Docker/虚拟机管理相关命令
 - [x] 更新setup-sudo.sh添加所有缺失的权限
 - [x] 确保所有需要sudo的命令都添加了sudo前缀
+
+
+## 改为root权限运行后台服务
+
+### 方案评估
+- [x] 分析root运行的优劣势
+- [x] 评估安全风险和缓解措施
+- [x] 确认可行性
+
+### 代码修改
+- [x] 移除networkInterfaceService中的所有sudo(14处)
+- [x] 移除dhcpService中的所有sudo(7处)
+- [x] 移除wirelessService中的所有sudo(7处)
+- [x] 检查其他service文件(无其他sudo)
+
+### 配置修改
+- [x] 更新systemd服务配置User=root
+- [x] 保留setup-sudo.sh脚本(但不再调用)
+- [x] 更新install-all.sh移除sudo配置步骤
+- [x] 更新DEPLOYMENT.md文档说明root运行
+
+### 测试
+- [ ] 验证所有功能在root权限下正常工作(待ARM设备测试)

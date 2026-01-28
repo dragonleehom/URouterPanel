@@ -319,7 +319,7 @@ export async function configureWiFi(config: WiFiConfig): Promise<{ success: bool
     }
 
     // 写入配置文件 (需要root权限)
-    await execAsync(`echo '${configContent.replace(/'/g, "'\\''")}' | sudo tee ${HOSTAPD_CONFIG_FILE} > /dev/null`);
+    await execAsync(`echo '${configContent.replace(/'/g, "'\\''")}' | tee ${HOSTAPD_CONFIG_FILE} > /dev/null`);
 
     return { success: true, message: 'WiFi配置已保存' };
   } catch (error) {
@@ -391,10 +391,10 @@ export async function startWiFi(): Promise<{ success: boolean; message: string }
     }
 
     // 启用无线接口 (需要root权限)
-    await execAsync(`sudo ip link set ${config.interface} up`);
+    await execAsync(`ip link set ${config.interface} up`);
 
     // 启动hostapd服务 (需要root权限)
-    await execAsync(`sudo systemctl start ${HOSTAPD_SERVICE}`);
+    await execAsync(`systemctl start ${HOSTAPD_SERVICE}`);
 
     // 等待一下让服务启动
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -405,7 +405,7 @@ export async function startWiFi(): Promise<{ success: boolean; message: string }
       return { success: true, message: 'WiFi已启动' };
     } catch (error) {
       // 获取服务日志
-      const { stdout } = await execAsync(`sudo journalctl -u ${HOSTAPD_SERVICE} -n 10 --no-pager`);
+      const { stdout } = await execAsync(`journalctl -u ${HOSTAPD_SERVICE} -n 10 --no-pager`);
       return { success: false, message: `WiFi启动失败,请检查日志:\n${stdout}` };
     }
   } catch (error) {
@@ -419,7 +419,7 @@ export async function startWiFi(): Promise<{ success: boolean; message: string }
  */
 export async function stopWiFi(): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync(`sudo systemctl stop ${HOSTAPD_SERVICE}`);
+    await execAsync(`systemctl stop ${HOSTAPD_SERVICE}`);
     return { success: true, message: 'WiFi已停止' };
   } catch (error) {
     console.error('Failed to stop WiFi:', error);
@@ -432,7 +432,7 @@ export async function stopWiFi(): Promise<{ success: boolean; message: string }>
  */
 export async function restartWiFi(): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync(`sudo systemctl restart ${HOSTAPD_SERVICE}`);
+    await execAsync(`systemctl restart ${HOSTAPD_SERVICE}`);
     
     // 等待一下让服务重启
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -512,7 +512,7 @@ export async function getWiFiClients(iface: string): Promise<WiFiClient[]> {
  */
 export async function disconnectWiFiClient(iface: string, mac: string): Promise<{ success: boolean; message: string }> {
   try {
-    await execAsync(`sudo iw dev ${iface} station del ${mac}`);
+    await execAsync(`iw dev ${iface} station del ${mac}`);
     return { success: true, message: '客户端已断开' };
   } catch (error) {
     console.error('Failed to disconnect WiFi client:', error);

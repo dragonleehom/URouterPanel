@@ -30,14 +30,10 @@ if [ ! -f "$PROJECT_DIR/package.json" ]; then
   exit 1
 fi
 
-# 获取当前用户
-if [ -n "$SUDO_USER" ]; then
-  APP_USER=$SUDO_USER
-else
-  APP_USER=$(whoami)
-fi
+# 路由器系统需要root权限运行
+APP_USER=root
 
-echo "服务用户: $APP_USER"
+echo "服务用户: $APP_USER (路由器系统需要完全的系统控制权限)"
 echo ""
 
 # 创建systemd服务文件
@@ -52,10 +48,11 @@ Wants=mysql.service docker.service
 
 [Service]
 Type=simple
-User=$APP_USER
+User=root
+Group=root
 WorkingDirectory=$PROJECT_DIR
 Environment="NODE_ENV=production"
-Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ExecStart=/usr/bin/node $PROJECT_DIR/dist/index.js
 Restart=always
 RestartSec=10
@@ -63,16 +60,11 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=urouteros
 
-# 安全配置
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=read-only
-ReadWritePaths=$PROJECT_DIR /var/lib/urouteros /var/log/urouteros
-
 # 资源限制
 LimitNOFILE=65536
 LimitNPROC=4096
+
+# 路由器系统需要完全的系统访问权限,不应用安全限制
 
 [Install]
 WantedBy=multi-user.target
