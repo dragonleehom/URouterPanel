@@ -8,6 +8,7 @@ import { networkRouter } from "./networkRouter";
 import { virtualNetworkRouter } from "./virtualNetworkRouter";
 import { vmRouter } from "./vmRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
+import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from "./api-client";
 import { z } from "zod";
@@ -33,6 +34,23 @@ export const appRouter = router({
       }),
     getServiceStatus: publicProcedure.query(async () => {
       return await getServiceStatus();
+    }),
+  }),
+  hardwareMonitor: router({
+    getAll: publicProcedure.query(async () => {
+      return await getAllHardwareInfo();
+    }),
+    getCPU: publicProcedure.query(async () => {
+      return await getCPUInfo();
+    }),
+    getMemory: publicProcedure.query(async () => {
+      return await getMemoryInfo();
+    }),
+    getDisks: publicProcedure.query(async () => {
+      return await getDiskInfo();
+    }),
+    getGPUs: publicProcedure.query(async () => {
+      return await getGPUInfo();
     }),
   }),
   appStore: appStoreRouter,

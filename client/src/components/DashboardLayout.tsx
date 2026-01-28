@@ -77,7 +77,7 @@ const menuItems: MenuItem[] = [
   { icon: Package, label: "应用市场", path: "/appstore" },
   { icon: Box, label: "容器管理", path: "/containers" },
   { icon: Server, label: "虚拟机", path: "/vms" },
-  { icon: HardDrive, label: "硬件监控", path: "/hardware" },
+  { icon: HardDrive, label: "硬件监控", path: "/hardware-monitor" },
   { icon: BarChart3, label: "系统监控", path: "/monitoring" },
   { icon: Activity, label: "系统状态", path: "/status" },
   { icon: Settings, label: "系统设置", path: "/settings" },
