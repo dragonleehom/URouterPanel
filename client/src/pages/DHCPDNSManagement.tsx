@@ -1,15 +1,8 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -18,1130 +11,597 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import {
   Server,
   Plus,
-  Settings,
   Trash2,
   RefreshCw,
-  Wifi,
-  Globe,
-  CheckCircle2,
-  XCircle,
+  Power,
+  PowerOff,
   Clock,
 } from "lucide-react";
-
-// 类型定义
-interface DHCPPool {
-  id: string;
-  name: string;
-  interface: string;
-  startIp: string;
-  endIp: string;
-  netmask: string;
-  gateway: string;
-  dnsServers: string[];
-  leaseTime: number; // 秒
-  enabled: boolean;
-}
-
-interface StaticLease {
-  id: string;
-  hostname: string;
-  macAddress: string;
-  ipAddress: string;
-  enabled: boolean;
-}
-
-interface DHCPLease {
-  id: string;
-  hostname: string;
-  macAddress: string;
-  ipAddress: string;
-  expiresAt: Date;
-  isActive: boolean;
-}
-
-interface DNSForwarder {
-  id: string;
-  name: string;
-  server: string;
-  port: number;
-  enabled: boolean;
-}
-
-interface DNSRecord {
-  id: string;
-  hostname: string;
-  ipAddress: string;
-  type: "A" | "AAAA" | "CNAME";
-  enabled: boolean;
-}
-
-// 模拟数据
-const mockDHCPPools: DHCPPool[] = [
-  {
-    id: "1",
-    name: "LAN地址池",
-    interface: "br-lan",
-    startIp: "192.168.1.100",
-    endIp: "192.168.1.200",
-    netmask: "255.255.255.0",
-    gateway: "192.168.1.1",
-    dnsServers: ["192.168.1.1", "8.8.8.8"],
-    leaseTime: 86400,
-    enabled: true,
-  },
-  {
-    id: "2",
-    name: "Guest地址池",
-    interface: "br-guest",
-    startIp: "192.168.2.100",
-    endIp: "192.168.2.200",
-    netmask: "255.255.255.0",
-    gateway: "192.168.2.1",
-    dnsServers: ["192.168.2.1"],
-    leaseTime: 3600,
-    enabled: true,
-  },
-];
-
-const mockStaticLeases: StaticLease[] = [
-  {
-    id: "1",
-    hostname: "nas-server",
-    macAddress: "00:11:22:33:44:55",
-    ipAddress: "192.168.1.10",
-    enabled: true,
-  },
-  {
-    id: "2",
-    hostname: "printer",
-    macAddress: "AA:BB:CC:DD:EE:FF",
-    ipAddress: "192.168.1.20",
-    enabled: true,
-  },
-];
-
-const mockDHCPLeases: DHCPLease[] = [
-  {
-    id: "1",
-    hostname: "laptop-01",
-    macAddress: "11:22:33:44:55:66",
-    ipAddress: "192.168.1.150",
-    expiresAt: new Date(Date.now() + 3600 * 1000),
-    isActive: true,
-  },
-  {
-    id: "2",
-    hostname: "phone-02",
-    macAddress: "77:88:99:AA:BB:CC",
-    ipAddress: "192.168.1.151",
-    expiresAt: new Date(Date.now() + 7200 * 1000),
-    isActive: true,
-  },
-];
-
-const mockDNSForwarders: DNSForwarder[] = [
-  {
-    id: "1",
-    name: "Google DNS",
-    server: "8.8.8.8",
-    port: 53,
-    enabled: true,
-  },
-  {
-    id: "2",
-    name: "Cloudflare DNS",
-    server: "1.1.1.1",
-    port: 53,
-    enabled: true,
-  },
-];
-
-const mockDNSRecords: DNSRecord[] = [
-  {
-    id: "1",
-    hostname: "router.local",
-    ipAddress: "192.168.1.1",
-    type: "A",
-    enabled: true,
-  },
-  {
-    id: "2",
-    hostname: "nas.local",
-    ipAddress: "192.168.1.10",
-    type: "A",
-    enabled: true,
-  },
-];
+import { trpc } from "@/lib/trpc";
 
 export default function DHCPDNSManagement() {
-  const [dhcpPools, setDHCPPools] = useState<DHCPPool[]>(mockDHCPPools);
-  const [staticLeases, setStaticLeases] = useState<StaticLease[]>(mockStaticLeases);
-  const [dhcpLeases] = useState<DHCPLease[]>(mockDHCPLeases);
-  const [dnsForwarders, setDNSForwarders] = useState<DNSForwarder[]>(mockDNSForwarders);
-  const [dnsRecords, setDNSRecords] = useState<DNSRecord[]>(mockDNSRecords);
+  const [staticLeaseDialogOpen, setStaticLeaseDialogOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
 
-  const [isAddPoolOpen, setIsAddPoolOpen] = useState(false);
-  const [isAddLeaseOpen, setIsAddLeaseOpen] = useState(false);
-  const [isAddForwarderOpen, setIsAddForwarderOpen] = useState(false);
-  const [isAddRecordOpen, setIsAddRecordOpen] = useState(false);
+  // 获取DHCP/DNS状态
+  const { data: status, refetch: refetchStatus } = trpc.dhcpDns.getStatus.useQuery();
 
-  // 新建DHCP地址池表单
-  const [newPool, setNewPool] = useState({
-    name: "",
-    interface: "br-lan",
-    startIp: "",
-    endIp: "",
-    netmask: "255.255.255.0",
+  // 获取DHCP配置
+  const { data: config, refetch: refetchConfig } = trpc.dhcpDns.getConfig.useQuery();
+
+  // 获取租约列表
+  const { data: leases, isLoading: leasesLoading, refetch: refetchLeases } = 
+    trpc.dhcpDns.getLeases.useQuery();
+
+  // 获取静态租约列表
+  const { data: staticLeases, refetch: refetchStaticLeases } = 
+    trpc.dhcpDns.getStaticLeases.useQuery();
+
+  // 配置DHCP mutation
+  const configureMutation = trpc.dhcpDns.configure.useMutation({
+    onSuccess: () => {
+      toast.success("DHCP配置已保存");
+      refetchConfig();
+      refetchStatus();
+      setConfigDialogOpen(false);
+    },
+    onError: (error) => {
+      toast.error(`配置失败: ${error.message}`);
+    },
+  });
+
+  // 添加静态租约mutation
+  const addStaticLeaseMutation = trpc.dhcpDns.addStaticLease.useMutation({
+    onSuccess: () => {
+      toast.success("静态IP绑定已添加");
+      refetchStaticLeases();
+      setStaticLeaseDialogOpen(false);
+      setStaticLeaseForm({ hostname: "", mac: "", ip: "" });
+    },
+    onError: (error) => {
+      toast.error(`添加失败: ${error.message}`);
+    },
+  });
+
+  // 删除静态租约mutation
+  const deleteStaticLeaseMutation = trpc.dhcpDns.deleteStaticLease.useMutation({
+    onSuccess: () => {
+      toast.success("静态IP绑定已删除");
+      refetchStaticLeases();
+    },
+    onError: (error) => {
+      toast.error(`删除失败: ${error.message}`);
+    },
+  });
+
+  // 启动服务mutation
+  const startMutation = trpc.dhcpDns.start.useMutation({
+    onSuccess: () => {
+      toast.success("DHCP/DNS服务已启动");
+      refetchStatus();
+    },
+    onError: (error) => {
+      toast.error(`启动失败: ${error.message}`);
+    },
+  });
+
+  // 停止服务mutation
+  const stopMutation = trpc.dhcpDns.stop.useMutation({
+    onSuccess: () => {
+      toast.success("DHCP/DNS服务已停止");
+      refetchStatus();
+    },
+    onError: (error) => {
+      toast.error(`停止失败: ${error.message}`);
+    },
+  });
+
+  // 重启服务mutation
+  const restartMutation = trpc.dhcpDns.restart.useMutation({
+    onSuccess: () => {
+      toast.success("DHCP/DNS服务已重启");
+      refetchStatus();
+      refetchLeases();
+    },
+    onError: (error) => {
+      toast.error(`重启失败: ${error.message}`);
+    },
+  });
+
+  // 配置表单状态
+  const [configForm, setConfigForm] = useState({
+    interface: "",
+    start_ip: "",
+    end_ip: "",
+    netmask: "",
     gateway: "",
-    dnsServers: "8.8.8.8,1.1.1.1",
-    leaseTime: "86400",
+    dns_servers: "",
+    lease_time: "",
   });
 
-  // 新建静态租约表单
-  const [newLease, setNewLease] = useState({
+  // 静态租约表单状态
+  const [staticLeaseForm, setStaticLeaseForm] = useState({
     hostname: "",
-    macAddress: "",
-    ipAddress: "",
+    mac: "",
+    ip: "",
   });
 
-  // 新建DNS转发器表单
-  const [newForwarder, setNewForwarder] = useState({
-    name: "",
-    server: "",
-    port: "53",
-  });
+  // 加载配置到表单
+  const loadConfigToForm = () => {
+    if (config) {
+      setConfigForm({
+        interface: config.interface || "",
+        start_ip: config.start_ip || "",
+        end_ip: config.end_ip || "",
+        netmask: config.netmask || "",
+        gateway: config.gateway || "",
+        dns_servers: config.dns_servers?.join(",") || "",
+        lease_time: config.lease_time?.toString() || "",
+      });
+      setConfigDialogOpen(true);
+    }
+  };
 
-  // 新建DNS记录表单
-  const [newRecord, setNewRecord] = useState({
-    hostname: "",
-    ipAddress: "",
-    type: "A" as "A" | "AAAA" | "CNAME",
-  });
-
-  const handleAddPool = () => {
-    if (!newPool.name || !newPool.startIp || !newPool.endIp || !newPool.gateway) {
-      toast.error("请填写完整的地址池信息");
+  // 提交配置
+  const handleSubmitConfig = () => {
+    if (!configForm.interface || !configForm.start_ip || !configForm.end_ip) {
+      toast.error("请填写必填项");
       return;
     }
 
-    const pool: DHCPPool = {
-      id: Date.now().toString(),
-      name: newPool.name,
-      interface: newPool.interface,
-      startIp: newPool.startIp,
-      endIp: newPool.endIp,
-      netmask: newPool.netmask,
-      gateway: newPool.gateway,
-      dnsServers: newPool.dnsServers.split(",").map((s) => s.trim()),
-      leaseTime: parseInt(newPool.leaseTime),
-      enabled: true,
-    };
-
-    setDHCPPools([...dhcpPools, pool]);
-    setIsAddPoolOpen(false);
-    setNewPool({
-      name: "",
-      interface: "br-lan",
-      startIp: "",
-      endIp: "",
-      netmask: "255.255.255.0",
-      gateway: "",
-      dnsServers: "8.8.8.8,1.1.1.1",
-      leaseTime: "86400",
+    configureMutation.mutate({
+      interface: configForm.interface,
+      start_ip: configForm.start_ip,
+      end_ip: configForm.end_ip,
+      netmask: configForm.netmask || "255.255.255.0",
+      gateway: configForm.gateway,
+      dns_servers: configForm.dns_servers ? configForm.dns_servers.split(",").map(s => s.trim()) : [],
+      lease_time: configForm.lease_time ? parseInt(configForm.lease_time) : 86400,
     });
-    toast.success("DHCP地址池添加成功");
   };
 
-  const handleAddLease = () => {
-    if (!newLease.hostname || !newLease.macAddress || !newLease.ipAddress) {
-      toast.error("请填写完整的静态租约信息");
+  // 提交静态租约
+  const handleSubmitStaticLease = () => {
+    if (!staticLeaseForm.mac || !staticLeaseForm.ip) {
+      toast.error("请填写MAC地址和IP地址");
       return;
     }
 
-    const lease: StaticLease = {
-      id: Date.now().toString(),
-      ...newLease,
-      enabled: true,
-    };
-
-    setStaticLeases([...staticLeases, lease]);
-    setIsAddLeaseOpen(false);
-    setNewLease({
-      hostname: "",
-      macAddress: "",
-      ipAddress: "",
+    addStaticLeaseMutation.mutate({
+      hostname: staticLeaseForm.hostname || "",
+      mac: staticLeaseForm.mac,
+      ip: staticLeaseForm.ip,
     });
-    toast.success("静态租约添加成功");
   };
 
-  const handleAddForwarder = () => {
-    if (!newForwarder.name || !newForwarder.server) {
-      toast.error("请填写完整的DNS转发器信息");
-      return;
+  // 删除静态租约
+  const handleDeleteStaticLease = (mac: string) => {
+    if (confirm(`确定要删除MAC地址为 ${mac} 的静态绑定吗?`)) {
+      deleteStaticLeaseMutation.mutate({ mac });
     }
-
-    const forwarder: DNSForwarder = {
-      id: Date.now().toString(),
-      name: newForwarder.name,
-      server: newForwarder.server,
-      port: parseInt(newForwarder.port),
-      enabled: true,
-    };
-
-    setDNSForwarders([...dnsForwarders, forwarder]);
-    setIsAddForwarderOpen(false);
-    setNewForwarder({
-      name: "",
-      server: "",
-      port: "53",
-    });
-    toast.success("DNS转发器添加成功");
   };
 
-  const handleAddRecord = () => {
-    if (!newRecord.hostname || !newRecord.ipAddress) {
-      toast.error("请填写完整的DNS记录信息");
-      return;
-    }
-
-    const record: DNSRecord = {
-      id: Date.now().toString(),
-      ...newRecord,
-      enabled: true,
-    };
-
-    setDNSRecords([...dnsRecords, record]);
-    setIsAddRecordOpen(false);
-    setNewRecord({
-      hostname: "",
-      ipAddress: "",
-      type: "A",
-    });
-    toast.success("DNS记录添加成功");
-  };
-
-  const handleDeletePool = (id: string) => {
-    setDHCPPools(dhcpPools.filter((pool) => pool.id !== id));
-    toast.success("地址池已删除");
-  };
-
-  const handleDeleteLease = (id: string) => {
-    setStaticLeases(staticLeases.filter((lease) => lease.id !== id));
-    toast.success("静态租约已删除");
-  };
-
-  const handleDeleteForwarder = (id: string) => {
-    setDNSForwarders(dnsForwarders.filter((f) => f.id !== id));
-    toast.success("DNS转发器已删除");
-  };
-
-  const handleDeleteRecord = (id: string) => {
-    setDNSRecords(dnsRecords.filter((r) => r.id !== id));
-    toast.success("DNS记录已删除");
-  };
-
-  const handleTogglePool = (id: string) => {
-    setDHCPPools(
-      dhcpPools.map((pool) =>
-        pool.id === id ? { ...pool, enabled: !pool.enabled } : pool
-      )
+  if (leasesLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+          <p>加载中...</p>
+        </div>
+      </div>
     );
-    toast.success("地址池状态已更新");
-  };
-
-  const handleToggleLease = (id: string) => {
-    setStaticLeases(
-      staticLeases.map((lease) =>
-        lease.id === id ? { ...lease, enabled: !lease.enabled } : lease
-      )
-    );
-    toast.success("静态租约状态已更新");
-  };
-
-  const handleToggleForwarder = (id: string) => {
-    setDNSForwarders(
-      dnsForwarders.map((f) => (f.id === id ? { ...f, enabled: !f.enabled } : f))
-    );
-    toast.success("DNS转发器状态已更新");
-  };
-
-  const handleToggleRecord = (id: string) => {
-    setDNSRecords(
-      dnsRecords.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r))
-    );
-    toast.success("DNS记录状态已更新");
-  };
-
-  const formatLeaseTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    if (hours >= 24) {
-      return `${Math.floor(hours / 24)}天`;
-    }
-    return `${hours}小时`;
-  };
-
-  const formatExpiresAt = (date: Date) => {
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 60) {
-      return `${minutes}分钟`;
-    }
-    const hours = Math.floor(minutes / 60);
-    return `${hours}小时`;
-  };
+  }
 
   return (
     <div className="space-y-6">
-      {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">DHCP/DNS管理</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            配置DHCP地址池、静态租约和DNS服务
+          <h1 className="text-3xl font-bold">DHCP/DNS服务</h1>
+          <p className="text-muted-foreground mt-1">
+            管理DHCP服务器、租约和静态IP绑定
           </p>
         </div>
-        <Button variant="outline" size="sm">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          刷新
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetchStatus();
+              refetchConfig();
+              refetchLeases();
+              refetchStaticLeases();
+            }}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            刷新
+          </Button>
+          {status?.running ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => stopMutation.mutate()}
+              disabled={stopMutation.isPending}
+            >
+              <PowerOff className="w-4 h-4 mr-2" />
+              停止服务
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => startMutation.mutate()}
+              disabled={startMutation.isPending}
+            >
+              <Power className="w-4 h-4 mr-2" />
+              启动服务
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => restartMutation.mutate()}
+            disabled={restartMutation.isPending}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            重启服务
+          </Button>
+        </div>
       </div>
 
-      {/* 标签页 */}
-      <Tabs defaultValue="dhcp-pools" className="space-y-4">
+      {/* 状态卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <Server className="w-8 h-8 text-primary" />
+            <div>
+              <p className="text-sm text-muted-foreground">服务状态</p>
+              <p className="text-2xl font-bold">
+                {status?.running ? "运行中" : "已停止"}
+              </p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">活跃租约</p>
+            <p className="text-2xl font-bold">
+              {leases?.filter((l: any) => l.active).length || 0}
+            </p>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">静态绑定</p>
+            <p className="text-2xl font-bold">{staticLeases?.length || 0}</p>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div>
+            <p className="text-sm text-muted-foreground">配置状态</p>
+            <p className="text-2xl font-bold">
+              {status?.configured ? "已配置" : "未配置"}
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="config" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="dhcp-pools">
-            <Server className="w-4 h-4 mr-2" />
-            DHCP地址池
-          </TabsTrigger>
-          <TabsTrigger value="static-leases">
-            <Wifi className="w-4 h-4 mr-2" />
-            静态租约
-          </TabsTrigger>
-          <TabsTrigger value="dhcp-leases">
-            <Clock className="w-4 h-4 mr-2" />
-            DHCP租约
-          </TabsTrigger>
-          <TabsTrigger value="dns-forwarders">
-            <Globe className="w-4 h-4 mr-2" />
-            DNS转发
-          </TabsTrigger>
-          <TabsTrigger value="dns-records">
-            <Server className="w-4 h-4 mr-2" />
-            本地DNS
-          </TabsTrigger>
+          <TabsTrigger value="config">DHCP配置</TabsTrigger>
+          <TabsTrigger value="leases">租约列表</TabsTrigger>
+          <TabsTrigger value="static">静态绑定</TabsTrigger>
         </TabsList>
 
-        {/* DHCP地址池标签页 */}
-        <TabsContent value="dhcp-pools" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setIsAddPoolOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              添加地址池
-            </Button>
-          </div>
+        {/* DHCP配置标签页 */}
+        <TabsContent value="config" className="space-y-4">
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">当前配置</h3>
+                <Button onClick={loadConfigToForm}>编辑配置</Button>
+              </div>
 
-          <div className="grid gap-4">
-            {dhcpPools.map((pool) => (
-              <Card key={pool.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <CardTitle className="text-base">{pool.name}</CardTitle>
-                      <Badge variant="outline" className="text-xs">
-                        {pool.interface}
-                      </Badge>
-                      <Switch
-                        checked={pool.enabled}
-                        onCheckedChange={() => handleTogglePool(pool.id)}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        <Settings className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeletePool(pool.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </Button>
-                    </div>
+              {config ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>接口</Label>
+                    <p className="text-sm mt-1">{config.interface || "未配置"}</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">地址范围</span>
-                      <p className="font-mono mt-1">
-                        {pool.startIp} - {pool.endIp}
+                  <div>
+                    <Label>IP范围</Label>
+                    <p className="text-sm mt-1">
+                      {config.start_ip && config.end_ip
+                        ? `${config.start_ip} - ${config.end_ip}`
+                        : "未配置"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>子网掩码</Label>
+                    <p className="text-sm mt-1">{config.netmask || "未配置"}</p>
+                  </div>
+                  <div>
+                    <Label>网关</Label>
+                    <p className="text-sm mt-1">{config.gateway || "未配置"}</p>
+                  </div>
+                  <div>
+                    <Label>DNS服务器</Label>
+                    <p className="text-sm mt-1">
+                      {config.dns_servers?.join(", ") || "未配置"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>租约时间</Label>
+                    <p className="text-sm mt-1">
+                      {config.lease_time ? `${config.lease_time}秒` : "未配置"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">暂无配置信息</p>
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* 租约列表标签页 */}
+        <TabsContent value="leases" className="space-y-4">
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">DHCP租约</h3>
+            {leases && leases.length > 0 ? (
+              <div className="space-y-2">
+                {leases.map((lease: any) => (
+                  <div
+                    key={lease.mac}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{lease.hostname || "未知主机"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        MAC: {lease.mac} | IP: {lease.ip}
                       </p>
                     </div>
-                    <div>
-                      <span className="text-gray-500">子网掩码</span>
-                      <p className="font-mono mt-1">{pool.netmask}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">网关</span>
-                      <p className="font-mono mt-1">{pool.gateway}</p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">租约时间</span>
-                      <p className="mt-1">{formatLeaseTime(pool.leaseTime)}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-500">DNS服务器</span>
-                      <p className="font-mono mt-1">{pool.dnsServers.join(", ")}</p>
+                    <div className="flex items-center gap-3">
+                      {lease.active ? (
+                        <span className="text-sm text-green-600 flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          活跃
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">已过期</span>
+                      )}
+                      {lease.expires && (
+                        <span className="text-xs text-muted-foreground">
+                          过期: {new Date(lease.expires * 1000).toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </CardContent>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground">暂无租约记录</p>
+            )}
+          </Card>
+        </TabsContent>
+
+        {/* 静态绑定标签页 */}
+        <TabsContent value="static" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">静态IP绑定</h3>
+            <Button onClick={() => setStaticLeaseDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              添加绑定
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            {staticLeases && staticLeases.length > 0 ? (
+              staticLeases.map((lease: any) => (
+                <Card key={lease.mac} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{lease.hostname || "未命名"}</p>
+                      <p className="text-sm text-muted-foreground">
+                        MAC: {lease.mac} | IP: {lease.ip}
+                      </p>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteStaticLease(lease.mac)}
+                      disabled={deleteStaticLeaseMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">暂无静态IP绑定</p>
+                <Button
+                  className="mt-4"
+                  onClick={() => setStaticLeaseDialogOpen(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  添加第一个绑定
+                </Button>
               </Card>
-            ))}
+            )}
           </div>
-        </TabsContent>
-
-        {/* 静态租约标签页 */}
-        <TabsContent value="static-leases" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setIsAddLeaseOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              添加静态租约
-            </Button>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>静态租约列表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        主机名
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        MAC地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        IP地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        状态
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {staticLeases.map((lease) => (
-                      <tr key={lease.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-sm">{lease.hostname}</td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{lease.macAddress}</code>
-                        </td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{lease.ipAddress}</code>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleLease(lease.id)}
-                            className="flex items-center gap-1"
-                          >
-                            {lease.enabled ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-400" />
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {lease.enabled ? "已启用" : "已禁用"}
-                            </span>
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="outline" size="sm">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteLease(lease.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 静态租约说明 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">静态租约说明</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>
-                静态租约(Static Lease)为指定MAC地址的设备分配固定的IP地址,确保设备每次连接时都获得相同的IP。
-              </p>
-              <p className="font-medium">典型应用场景:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>为NAS、打印机等设备分配固定IP,便于访问</li>
-                <li>为服务器设备分配固定IP,便于配置防火墙规则</li>
-                <li>为IoT设备分配固定IP,便于管理和监控</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* DHCP租约标签页 */}
-        <TabsContent value="dhcp-leases" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>当前DHCP租约</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        主机名
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        MAC地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        IP地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        剩余时间
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        状态
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dhcpLeases.map((lease) => (
-                      <tr key={lease.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-sm">{lease.hostname}</td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{lease.macAddress}</code>
-                        </td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{lease.ipAddress}</code>
-                        </td>
-                        <td className="py-3 px-4 text-sm">
-                          {formatExpiresAt(lease.expiresAt)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge
-                            variant={lease.isActive ? "default" : "secondary"}
-                            className="text-xs"
-                          >
-                            {lease.isActive ? "活跃" : "过期"}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* DNS转发标签页 */}
-        <TabsContent value="dns-forwarders" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setIsAddForwarderOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              添加DNS转发器
-            </Button>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>DNS转发器列表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        名称
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        服务器地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        端口
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        状态
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dnsForwarders.map((forwarder) => (
-                      <tr key={forwarder.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4 text-sm">{forwarder.name}</td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{forwarder.server}</code>
-                        </td>
-                        <td className="py-3 px-4 text-sm">{forwarder.port}</td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleForwarder(forwarder.id)}
-                            className="flex items-center gap-1"
-                          >
-                            {forwarder.enabled ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-400" />
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {forwarder.enabled ? "已启用" : "已禁用"}
-                            </span>
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="outline" size="sm">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteForwarder(forwarder.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* DNS转发说明 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">DNS转发说明</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>
-                DNS转发器将本地无法解析的域名查询转发到上游DNS服务器。建议配置多个DNS服务器以提高可用性。
-              </p>
-              <p className="font-medium">常用公共DNS服务器:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>Google DNS: 8.8.8.8, 8.8.4.4</li>
-                <li>Cloudflare DNS: 1.1.1.1, 1.0.0.1</li>
-                <li>阿里DNS: 223.5.5.5, 223.6.6.6</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* 本地DNS记录标签页 */}
-        <TabsContent value="dns-records" className="space-y-4">
-          <div className="flex justify-end">
-            <Button onClick={() => setIsAddRecordOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              添加DNS记录
-            </Button>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>本地DNS记录列表</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        主机名
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        IP地址
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        类型
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">
-                        状态
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">
-                        操作
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dnsRecords.map((record) => (
-                      <tr key={record.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{record.hostname}</code>
-                        </td>
-                        <td className="py-3 px-4">
-                          <code className="text-sm font-mono">{record.ipAddress}</code>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Badge variant="outline" className="text-xs">
-                            {record.type}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <button
-                            onClick={() => handleToggleRecord(record.id)}
-                            className="flex items-center gap-1"
-                          >
-                            {record.enabled ? (
-                              <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-gray-400" />
-                            )}
-                            <span className="text-xs text-gray-500">
-                              {record.enabled ? "已启用" : "已禁用"}
-                            </span>
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="outline" size="sm">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteRecord(record.id)}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 本地DNS记录说明 */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">本地DNS记录说明</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>
-                本地DNS记录允许您为内网设备配置自定义域名,无需修改每台设备的hosts文件。
-              </p>
-              <p className="font-medium">典型应用场景:</p>
-              <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>为路由器配置 router.local 域名,方便访问管理界面</li>
-                <li>为NAS配置 nas.local 域名,方便文件共享访问</li>
-                <li>为内网服务配置友好的域名,提升用户体验</li>
-              </ul>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* 添加DHCP地址池对话框 */}
-      <Dialog open={isAddPoolOpen} onOpenChange={setIsAddPoolOpen}>
-        <DialogContent className="max-w-2xl">
+      {/* 配置对话框 */}
+      <Dialog open={configDialogOpen} onOpenChange={setConfigDialogOpen}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加DHCP地址池</DialogTitle>
+            <DialogTitle>DHCP配置</DialogTitle>
             <DialogDescription>
-              配置新的DHCP地址池
+              配置DHCP服务器参数
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <Label htmlFor="interface">接口 *</Label>
+              <Input
+                id="interface"
+                value={configForm.interface}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, interface: e.target.value })
+                }
+                placeholder="例如: br-lan"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="pool-name">地址池名称</Label>
+                <Label htmlFor="start_ip">起始IP *</Label>
                 <Input
-                  id="pool-name"
-                  value={newPool.name}
-                  onChange={(e) => setNewPool({ ...newPool, name: e.target.value })}
-                  placeholder="例如: LAN地址池"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pool-interface">接口</Label>
-                <Select
-                  value={newPool.interface}
-                  onValueChange={(value) => setNewPool({ ...newPool, interface: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="br-lan">br-lan</SelectItem>
-                    <SelectItem value="br-guest">br-guest</SelectItem>
-                    <SelectItem value="eth0">eth0</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="pool-start">起始IP</Label>
-                <Input
-                  id="pool-start"
-                  value={newPool.startIp}
-                  onChange={(e) => setNewPool({ ...newPool, startIp: e.target.value })}
+                  id="start_ip"
+                  value={configForm.start_ip}
+                  onChange={(e) =>
+                    setConfigForm({ ...configForm, start_ip: e.target.value })
+                  }
                   placeholder="192.168.1.100"
                 />
               </div>
               <div>
-                <Label htmlFor="pool-end">结束IP</Label>
+                <Label htmlFor="end_ip">结束IP *</Label>
                 <Input
-                  id="pool-end"
-                  value={newPool.endIp}
-                  onChange={(e) => setNewPool({ ...newPool, endIp: e.target.value })}
+                  id="end_ip"
+                  value={configForm.end_ip}
+                  onChange={(e) =>
+                    setConfigForm({ ...configForm, end_ip: e.target.value })
+                  }
                   placeholder="192.168.1.200"
                 />
               </div>
-              <div>
-                <Label htmlFor="pool-netmask">子网掩码</Label>
-                <Input
-                  id="pool-netmask"
-                  value={newPool.netmask}
-                  onChange={(e) => setNewPool({ ...newPool, netmask: e.target.value })}
-                  placeholder="255.255.255.0"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pool-gateway">网关</Label>
-                <Input
-                  id="pool-gateway"
-                  value={newPool.gateway}
-                  onChange={(e) => setNewPool({ ...newPool, gateway: e.target.value })}
-                  placeholder="192.168.1.1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pool-dns">DNS服务器</Label>
-                <Input
-                  id="pool-dns"
-                  value={newPool.dnsServers}
-                  onChange={(e) =>
-                    setNewPool({ ...newPool, dnsServers: e.target.value })
-                  }
-                  placeholder="8.8.8.8,1.1.1.1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="pool-lease">租约时间(秒)</Label>
-                <Input
-                  id="pool-lease"
-                  value={newPool.leaseTime}
-                  onChange={(e) =>
-                    setNewPool({ ...newPool, leaseTime: e.target.value })
-                  }
-                  placeholder="86400"
-                />
-              </div>
+            </div>
+            <div>
+              <Label htmlFor="netmask">子网掩码</Label>
+              <Input
+                id="netmask"
+                value={configForm.netmask}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, netmask: e.target.value })
+                }
+                placeholder="255.255.255.0"
+              />
+            </div>
+            <div>
+              <Label htmlFor="gateway">网关</Label>
+              <Input
+                id="gateway"
+                value={configForm.gateway}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, gateway: e.target.value })
+                }
+                placeholder="192.168.1.1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="dns_servers">DNS服务器(逗号分隔)</Label>
+              <Input
+                id="dns_servers"
+                value={configForm.dns_servers}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, dns_servers: e.target.value })
+                }
+                placeholder="8.8.8.8,8.8.4.4"
+              />
+            </div>
+            <div>
+              <Label htmlFor="lease_time">租约时间(秒)</Label>
+              <Input
+                id="lease_time"
+                type="number"
+                value={configForm.lease_time}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, lease_time: e.target.value })
+                }
+                placeholder="86400"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPoolOpen(false)}>
+            <Button variant="outline" onClick={() => setConfigDialogOpen(false)}>
               取消
             </Button>
-            <Button onClick={handleAddPool}>添加</Button>
+            <Button
+              onClick={handleSubmitConfig}
+              disabled={configureMutation.isPending}
+            >
+              {configureMutation.isPending ? "保存中..." : "保存"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* 添加静态租约对话框 */}
-      <Dialog open={isAddLeaseOpen} onOpenChange={setIsAddLeaseOpen}>
+      {/* 静态租约对话框 */}
+      <Dialog open={staticLeaseDialogOpen} onOpenChange={setStaticLeaseDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加静态租约</DialogTitle>
+            <DialogTitle>添加静态IP绑定</DialogTitle>
             <DialogDescription>
               为指定MAC地址分配固定IP
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="lease-hostname">主机名</Label>
+              <Label htmlFor="hostname">主机名</Label>
               <Input
-                id="lease-hostname"
-                value={newLease.hostname}
+                id="hostname"
+                value={staticLeaseForm.hostname}
                 onChange={(e) =>
-                  setNewLease({ ...newLease, hostname: e.target.value })
+                  setStaticLeaseForm({ ...staticLeaseForm, hostname: e.target.value })
                 }
-                placeholder="nas-server"
+                placeholder="例如: my-device"
               />
             </div>
             <div>
-              <Label htmlFor="lease-mac">MAC地址</Label>
+              <Label htmlFor="mac">MAC地址 *</Label>
               <Input
-                id="lease-mac"
-                value={newLease.macAddress}
+                id="mac"
+                value={staticLeaseForm.mac}
                 onChange={(e) =>
-                  setNewLease({ ...newLease, macAddress: e.target.value })
+                  setStaticLeaseForm({ ...staticLeaseForm, mac: e.target.value })
                 }
-                placeholder="00:11:22:33:44:55"
+                placeholder="AA:BB:CC:DD:EE:FF"
               />
             </div>
             <div>
-              <Label htmlFor="lease-ip">IP地址</Label>
+              <Label htmlFor="ip">IP地址 *</Label>
               <Input
-                id="lease-ip"
-                value={newLease.ipAddress}
+                id="ip"
+                value={staticLeaseForm.ip}
                 onChange={(e) =>
-                  setNewLease({ ...newLease, ipAddress: e.target.value })
+                  setStaticLeaseForm({ ...staticLeaseForm, ip: e.target.value })
                 }
-                placeholder="192.168.1.10"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddLeaseOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleAddLease}>添加</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 添加DNS转发器对话框 */}
-      <Dialog open={isAddForwarderOpen} onOpenChange={setIsAddForwarderOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>添加DNS转发器</DialogTitle>
-            <DialogDescription>
-              配置上游DNS服务器
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="forwarder-name">名称</Label>
-              <Input
-                id="forwarder-name"
-                value={newForwarder.name}
-                onChange={(e) =>
-                  setNewForwarder({ ...newForwarder, name: e.target.value })
-                }
-                placeholder="Google DNS"
-              />
-            </div>
-            <div>
-              <Label htmlFor="forwarder-server">服务器地址</Label>
-              <Input
-                id="forwarder-server"
-                value={newForwarder.server}
-                onChange={(e) =>
-                  setNewForwarder({ ...newForwarder, server: e.target.value })
-                }
-                placeholder="8.8.8.8"
-              />
-            </div>
-            <div>
-              <Label htmlFor="forwarder-port">端口</Label>
-              <Input
-                id="forwarder-port"
-                value={newForwarder.port}
-                onChange={(e) =>
-                  setNewForwarder({ ...newForwarder, port: e.target.value })
-                }
-                placeholder="53"
+                placeholder="192.168.1.100"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddForwarderOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setStaticLeaseDialogOpen(false);
+                setStaticLeaseForm({ hostname: "", mac: "", ip: "" });
+              }}
+            >
               取消
             </Button>
-            <Button onClick={handleAddForwarder}>添加</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 添加DNS记录对话框 */}
-      <Dialog open={isAddRecordOpen} onOpenChange={setIsAddRecordOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>添加DNS记录</DialogTitle>
-            <DialogDescription>
-              配置本地DNS解析记录
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="record-hostname">主机名</Label>
-              <Input
-                id="record-hostname"
-                value={newRecord.hostname}
-                onChange={(e) =>
-                  setNewRecord({ ...newRecord, hostname: e.target.value })
-                }
-                placeholder="router.local"
-              />
-            </div>
-            <div>
-              <Label htmlFor="record-ip">IP地址</Label>
-              <Input
-                id="record-ip"
-                value={newRecord.ipAddress}
-                onChange={(e) =>
-                  setNewRecord({ ...newRecord, ipAddress: e.target.value })
-                }
-                placeholder="192.168.1.1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="record-type">记录类型</Label>
-              <Select
-                value={newRecord.type}
-                onValueChange={(value) =>
-                  setNewRecord({
-                    ...newRecord,
-                    type: value as "A" | "AAAA" | "CNAME",
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">A (IPv4)</SelectItem>
-                  <SelectItem value="AAAA">AAAA (IPv6)</SelectItem>
-                  <SelectItem value="CNAME">CNAME (别名)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddRecordOpen(false)}>
-              取消
+            <Button
+              onClick={handleSubmitStaticLease}
+              disabled={addStaticLeaseMutation.isPending}
+            >
+              {addStaticLeaseMutation.isPending ? "添加中..." : "添加"}
             </Button>
-            <Button onClick={handleAddRecord}>添加</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

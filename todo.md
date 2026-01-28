@@ -443,3 +443,19 @@
 - [x] 集成qos.toggleRule API切换规则状态
 - [x] 集成qos.enable/disable API启用/禁用QoS
 - [x] 实现完整的规则管理界面
+
+
+## DHCP/DNS管理页面重构 ✅
+
+- [x] 移除DHCPDNSManagement.tsx中的所有模拟数据
+- [x] 集成dhcpDns.getStatus API获取服务状态
+- [x] 集成dhcpDns.getConfig API获取DHCP配置
+- [x] 集成dhcpDns.configure API配置DHCP服务器
+- [x] 集成dhcpDns.getLeases API获取租约列表
+- [x] 集成dhcpDns.getStaticLeases API获取静态租约
+- [x] 集成dhcpDns.addStaticLease API添加静态IP绑定
+- [x] 集成dhcpDns.deleteStaticLease API删除静态IP绑定
+- [x] 集成dhcpDns.start/stop/restart API控制服务
+- [x] 实现完整的DHCP配置界面
+- [x] 实现租约管理功能
+- [x] 实现静态IP绑定管理功能
