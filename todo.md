@@ -1236,3 +1236,51 @@
 
 ### 测试验证
 - [x] TypeScript编译验证
+
+
+## ARM架构部署脚本完善 ✅
+
+### 目标
+完善部署脚本以支持ARM架构Ubuntu设备,确保所有功能依赖完整安装,并实现自动网络配置(WAN/LAN)
+
+### 依赖安装脚本
+- [x] 创建完整的系统依赖安装脚本(install-dependencies.sh)
+  - [x] 检测ARM架构(arm64/aarch64)
+  - [x] 安装Docker(ARM版本)
+  - [x] 安装QEMU/KVM(ARM版本,支持x86虚拟化)
+  - [x] 安装网络工具(bridge-utils, iproute2, iptables, dnsmasq)
+  - [x] 安装Node.js和pnpm
+  - [x] 安装数据库(MySQL)
+  - [x] 配置IOMMU/vfio-pci(如果硬件支持)
+
+### 网络配置脚本
+- [x] 创建自动网络配置脚本(setup-network.sh)
+  - [x] 检测所有网络接口
+  - [x] 自动识别连接Internet的接口作为wan
+  - [x] 配置WAN为DHCP客户端模式
+  - [x] 配置剩余接口为LAN
+  - [x] 创建br-lan网桥
+  - [x] 配置DHCP服务器(dnsmasq)
+    - [x] 网关: 192.168.188.1
+    - [x] IP范围: 192.168.188.2-254
+    - [x] DNS转发
+  - [x] 配置NAT转发(iptables)
+  - [x] 保存配置到/etc/network/interfaces
+
+### 应用部署脚本
+- [x] 创建应用部署脚本(deploy-app.sh)
+  - [x] 安装Node.js依赖(pnpm install)
+  - [x] 构建前端和后端(pnpm build)
+  - [x] 配置环境变量(.env)
+  - [x] 推送数据库schema(pnpm db:push)
+
+### systemd服务配置
+- [x] 创建systemd服务文件(urouteros.service)
+  - [x] 配置服务启动命令
+  - [x] 配置自动重启策略
+  - [x] 配置依赖关系(网络、数据库)
+  - [x] 启用开机自启动
+
+### 测试验证
+- [x] 创建一键部署脚本(install-all.sh)
+- [x] 创建部署文档(DEPLOYMENT.md)
