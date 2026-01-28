@@ -414,6 +414,207 @@ export const virtualNetworkRouter = router({
     }),
 
   /**
+   * 获取资源的当前网络连接
+   */
+  getResourceNetwork: protectedProcedure
+    .input(
+      z.object({
+        resourceId: z.string(),
+        resourceType: z.enum(["container", "vm"]),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 查询网络连接
+      const [networkInterface] = await db
+        .select()
+        .from(networkInterfaces)
+        .where(
+          and(
+            eq(networkInterfaces.resourceId, input.resourceId),
+            eq(networkInterfaces.resourceType, input.resourceType)
+          )
+        )
+        .limit(1);
+
+      if (!networkInterface) {
+        return null;
+      }
+
+      // 获取网络详细信息
+      const [network] = await db
+        .select()
+        .from(virtualNetworks)
+        .where(eq(virtualNetworks.id, networkInterface.networkId));
+
+      if (!network) {
+        return null;
+      }
+
+      return {
+        ...networkInterface,
+        networkName: network.name,
+        subnet: network.subnet,
+        gateway: network.gateway,
+        type: network.type,
+      };
+    }),
+
+  /**
+   * 更新容器网络连接
+   */
+  updateContainerNetwork: protectedProcedure
+    .input(
+      z.object({
+        containerId: z.string(),
+        newNetworkId: z.number(),
+        ipAddress: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 获取新网络信息
+      const [newNetwork] = await db
+        .select()
+        .from(virtualNetworks)
+        .where(eq(virtualNetworks.id, input.newNetworkId));
+
+      if (!newNetwork || !newNetwork.bridgeName) {
+        throw new Error("New network not found");
+      }
+
+      try {
+        // 查询当前网络连接
+        const [currentInterface] = await db
+          .select()
+          .from(networkInterfaces)
+          .where(
+            and(
+              eq(networkInterfaces.resourceId, input.containerId),
+              eq(networkInterfaces.resourceType, "container")
+            )
+          )
+          .limit(1);
+
+        // 如果有旧网络,先分离
+        if (currentInterface) {
+          const [oldNetwork] = await db
+            .select()
+            .from(virtualNetworks)
+            .where(eq(virtualNetworks.id, currentInterface.networkId));
+
+          if (oldNetwork?.bridgeName) {
+            await networkManager.detachContainerFromNetwork(
+              input.containerId,
+              oldNetwork.bridgeName
+            );
+          }
+
+          // 删除旧记录
+          await db
+            .delete(networkInterfaces)
+            .where(
+              and(
+                eq(networkInterfaces.resourceId, input.containerId),
+                eq(networkInterfaces.resourceType, "container")
+              )
+            );
+        }
+
+        // 连接到新网络
+        await networkManager.attachContainerToNetwork(
+          input.containerId,
+          newNetwork.bridgeName,
+          input.ipAddress
+        );
+
+        // 保存新记录
+        await db.insert(networkInterfaces).values({
+          networkId: input.newNetworkId,
+          resourceType: "container",
+          resourceId: input.containerId,
+          ipAddress: input.ipAddress,
+        });
+
+        return { success: true, message: "Container network updated successfully" };
+      } catch (error: any) {
+        throw new Error(`Failed to update container network: ${error.message}`);
+      }
+    }),
+
+  /**
+   * 更新虚拟机网络连接
+   */
+  updateVMNetwork: protectedProcedure
+    .input(
+      z.object({
+        vmName: z.string(),
+        newNetworkId: z.number(),
+        ipAddress: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // 获取新网络信息
+      const [newNetwork] = await db
+        .select()
+        .from(virtualNetworks)
+        .where(eq(virtualNetworks.id, input.newNetworkId));
+
+      if (!newNetwork || !newNetwork.bridgeName) {
+        throw new Error("New network not found");
+      }
+
+      try {
+        // 查询当前网络连接
+        const [currentInterface] = await db
+          .select()
+          .from(networkInterfaces)
+          .where(
+            and(
+              eq(networkInterfaces.resourceId, input.vmName),
+              eq(networkInterfaces.resourceType, "vm")
+            )
+          )
+          .limit(1);
+
+        // 如果有旧网络,删除记录
+        if (currentInterface) {
+          await db
+            .delete(networkInterfaces)
+            .where(
+              and(
+                eq(networkInterfaces.resourceId, input.vmName),
+                eq(networkInterfaces.resourceType, "vm")
+              )
+            );
+        }
+
+        // 保存新记录
+        await db.insert(networkInterfaces).values({
+          networkId: input.newNetworkId,
+          resourceType: "vm",
+          resourceId: input.vmName,
+          ipAddress: input.ipAddress,
+        });
+
+        return {
+          success: true,
+          message: "VM network updated successfully",
+          bridgeName: newNetwork.bridgeName,
+        };
+      } catch (error: any) {
+        throw new Error(`Failed to update VM network: ${error.message}`);
+      }
+    }),
+
+  /**
    * 添加NAT规则
    */
   addNATRule: protectedProcedure

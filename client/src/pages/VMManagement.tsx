@@ -45,9 +45,15 @@ import {
 import { HardwareDetectionPanel } from "@/components/vm/HardwareDetectionPanel";
 import { OptimizationRecommendations } from "@/components/vm/OptimizationRecommendations";
 import { AdvancedOptions, type AdvancedVMConfig } from "@/components/vm/AdvancedOptions";
+import { EditVMNetworkDialog } from "@/components/vm/EditVMNetworkDialog";
 
 export default function VMManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editNetworkDialogOpen, setEditNetworkDialogOpen] = useState(false);
+  const [selectedVM, setSelectedVM] = useState<{
+    name: string;
+    status: string;
+  } | null>(null);
   const [newVM, setNewVM] = useState({
     name: "",
     memory: 2048,
@@ -469,6 +475,17 @@ export default function VMManagement() {
                     )}
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedVM({ name: vm.name, status: vm.status });
+                        setEditNetworkDialogOpen(true);
+                      }}
+                      title="编辑网络"
+                    >
+                      <Network className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="destructive"
                       onClick={() => handleDelete(vm.name)}
                       disabled={deleteMutation.isPending || vm.status === "running"}
@@ -482,6 +499,19 @@ export default function VMManagement() {
           </div>
         )}
       </div>
+
+      {/* 编辑网络对话框 */}
+      {selectedVM && (
+        <EditVMNetworkDialog
+          open={editNetworkDialogOpen}
+          onOpenChange={setEditNetworkDialogOpen}
+          vmName={selectedVM.name}
+          vmStatus={selectedVM.status}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
+      )}
     </div>
   );
 }

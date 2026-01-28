@@ -39,10 +39,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EditNetworkDialog } from "@/components/container/EditNetworkDialog";
 
 export default function ContainerManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [pullDialogOpen, setPullDialogOpen] = useState(false);
+  const [editNetworkDialogOpen, setEditNetworkDialogOpen] = useState(false);
+  const [selectedContainer, setSelectedContainer] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [newContainer, setNewContainer] = useState({
     name: "",
     image: "",
@@ -564,6 +570,17 @@ export default function ContainerManagement() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => {
+                            setSelectedContainer({ id: container.id, name: container.name });
+                            setEditNetworkDialogOpen(true);
+                          }}
+                          title="编辑网络"
+                        >
+                          <Network className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleRemoveContainer(container.id)}
                           disabled={removeMutation.isPending}
                         >
@@ -630,6 +647,19 @@ export default function ContainerManagement() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* 编辑网络对话框 */}
+      {selectedContainer && (
+        <EditNetworkDialog
+          open={editNetworkDialogOpen}
+          onOpenChange={setEditNetworkDialogOpen}
+          containerId={selectedContainer.id}
+          containerName={selectedContainer.name}
+          onSuccess={() => {
+            refetchContainers();
+          }}
+        />
+      )}
     </div>
   );
 }

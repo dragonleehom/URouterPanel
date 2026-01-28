@@ -1039,3 +1039,43 @@
 
 ### 测试验证
 - [x] TypeScript编译验证通过
+
+
+## 容器和虚拟机网络编辑功能 ✅
+
+### 目标
+为正在运行的容器和虚拟机添加"编辑网络"功能,允许用户动态切换虚拟网络或修改IP地址,无需重新创建资源
+
+### 容器网络编辑
+- [x] 在ContainerManagement.tsx容器列表添加"编辑网络"按钮
+- [x] 创建EditNetworkDialog组件(容器版本)
+  - [x] 显示当前网络连接信息
+  - [x] 虚拟网络选择器
+  - [x] IP地址输入框
+  - [x] 保存/取消按钮
+- [x] 实现网络切换逻辑
+  - [x] 调用detachContainer API从旧网络分离
+  - [x] 调用attachContainer API连接到新网络
+  - [x] 处理错误和回滚
+- [x] 后端API支持
+  - [x] 实现updateContainerNetwork mutation
+
+### 虚拟机网络编辑
+- [x] 在VMManagement.tsx虚拟机列表添加"编辑网络"按钮
+- [x] 创建EditVMNetworkDialog组件(虚拟机版本)
+  - [x] 显示当前网络连接信息
+  - [x] 虚拟网络选择器
+  - [x] IP地址输入框
+  - [x] 状态检查提示(运行中/已停止)
+- [x] 实现网络切换逻辑
+  - [x] 调用updateVMNetwork API
+- [x] 后端API支持
+  - [x] 实现updateVMNetwork mutation
+
+### 数据查询优化
+- [x] 实现getResourceNetwork API
+  - [x] 根据resourceId和resourceType查询当前网络连接
+  - [x] 返回网络详细信息
+
+### 测试验证
+- [x] TypeScript编译验证
