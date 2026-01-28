@@ -27,6 +27,7 @@ import UPnPManagement from "./pages/UPnPManagement";
 import TrafficStatistics from "./pages/TrafficStatistics";
 import MACManagement from "./pages/MACManagement";
 import WOLManagement from "./pages/WOLManagement";
+import RoutingManagement from "./pages/RoutingManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
 function Router() {
@@ -48,6 +49,7 @@ function Router() {
         <Route path="/diagnostics" component={NetworkDiagnosticsOptimized} />
         <Route path="/wireless" component={WirelessManagement} />
         <Route path="/qos" component={QoSManagement} />
+        <Route path="/routing" component={RoutingManagement} />
         <Route path="/multiwan" component={MultiWANManagement} />
         <Route path="/vpn" component={VPNManagement} />
         <Route path="/ipv6" component={IPv6Management} />

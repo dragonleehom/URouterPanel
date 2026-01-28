@@ -459,3 +459,19 @@
 - [x] 实现完整的DHCP配置界面
 - [x] 实现租约管理功能
 - [x] 实现静态IP绑定管理功能
+
+
+## 路由管理页面重构 ✅
+
+- [x] 创建RoutingManagement.tsx页面
+- [x] 集成routes.list API获取路由表
+- [x] 集成routes.getDefaultGateway API获取默认网关
+- [x] 集成routes.setDefaultGateway API设置默认网关
+- [x] 集成routes.add API添加静态路由
+- [x] 集成routes.delete API删除路由
+- [x] 集成routes.getArpTable API获取ARP表
+- [x] 实现完整的路由表展示
+- [x] 实现静态路由添加/删除功能
+- [x] 实现默认网关设置功能
+- [x] 实现ARP表展示
+- [x] 在App.tsx中注册/routing路由
