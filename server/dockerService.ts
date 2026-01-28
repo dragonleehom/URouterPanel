@@ -285,3 +285,162 @@ export async function removeImage(imageId: string, force: boolean = false) {
     throw new Error(`Failed to remove image: ${error.message}`);
   }
 }
+
+
+
+/**
+ * 列出所有Docker网络
+ */
+export async function listNetworks() {
+  try {
+    const networks = await docker.listNetworks();
+    return networks.map((network) => ({
+      id: network.Id,
+      name: network.Name,
+      driver: network.Driver,
+      scope: network.Scope,
+      internal: network.Internal,
+      ipam: network.IPAM,
+      containers: network.Containers ? Object.keys(network.Containers) : [],
+      created: network.Created,
+    }));
+  } catch (error: any) {
+    console.error("Failed to list networks:", error);
+    throw new Error(`Failed to list networks: ${error.message}`);
+  }
+}
+
+/**
+ * 创建Docker网络
+ */
+export async function createNetwork(options: {
+  name: string;
+  driver?: string;
+  internal?: boolean;
+  subnet?: string;
+  gateway?: string;
+}) {
+  try {
+    const networkConfig: any = {
+      Name: options.name,
+      Driver: options.driver || "bridge",
+      Internal: options.internal || false,
+    };
+
+    if (options.subnet || options.gateway) {
+      networkConfig.IPAM = {
+        Config: [
+          {
+            Subnet: options.subnet,
+            Gateway: options.gateway,
+          },
+        ],
+      };
+    }
+
+    const network = await docker.createNetwork(networkConfig);
+    return {
+      id: network.id,
+      name: options.name,
+    };
+  } catch (error: any) {
+    console.error("Failed to create network:", error);
+    throw new Error(`Failed to create network: ${error.message}`);
+  }
+}
+
+/**
+ * 删除Docker网络
+ */
+export async function removeNetwork(networkId: string) {
+  try {
+    const network = docker.getNetwork(networkId);
+    await network.remove();
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Failed to remove network ${networkId}:`, error);
+    throw new Error(`Failed to remove network: ${error.message}`);
+  }
+}
+
+/**
+ * 获取网络详情
+ */
+export async function inspectNetwork(networkId: string) {
+  try {
+    const network = docker.getNetwork(networkId);
+    const info = await network.inspect();
+    return {
+      id: info.Id,
+      name: info.Name,
+      driver: info.Driver,
+      scope: info.Scope,
+      internal: info.Internal,
+      ipam: info.IPAM,
+      containers: info.Containers ? Object.entries(info.Containers).map(([id, data]: [string, any]) => ({
+        id,
+        name: data.Name,
+        ipv4Address: data.IPv4Address,
+        ipv6Address: data.IPv6Address,
+        macAddress: data.MacAddress,
+      })) : [],
+      options: info.Options,
+      created: info.Created,
+    };
+  } catch (error: any) {
+    console.error(`Failed to inspect network ${networkId}:`, error);
+    throw new Error(`Failed to inspect network: ${error.message}`);
+  }
+}
+
+/**
+ * 将容器连接到网络
+ */
+export async function connectContainerToNetwork(
+  containerId: string,
+  networkId: string,
+  options?: {
+    aliases?: string[];
+    ipv4Address?: string;
+    ipv6Address?: string;
+  }
+) {
+  try {
+    const network = docker.getNetwork(networkId);
+    await network.connect({
+      Container: containerId,
+      EndpointConfig: {
+        Aliases: options?.aliases,
+        IPAMConfig: {
+          IPv4Address: options?.ipv4Address,
+          IPv6Address: options?.ipv6Address,
+        },
+      },
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Failed to connect container to network:`, error);
+    throw new Error(`Failed to connect container to network: ${error.message}`);
+  }
+}
+
+/**
+ * 将容器从网络断开
+ */
+export async function disconnectContainerFromNetwork(
+  containerId: string,
+  networkId: string,
+  force: boolean = false
+) {
+  try {
+    const network = docker.getNetwork(networkId);
+    await network.disconnect({
+      Container: containerId,
+      Force: force,
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error(`Failed to disconnect container from network:`, error);
+    throw new Error(`Failed to disconnect container from network: ${error.message}`);
+  }
+}

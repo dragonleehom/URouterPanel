@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { ContainerResourceChart } from "@/components/ContainerResourceChart";
 import {
   Activity,
   AlertTriangle,
@@ -188,6 +189,9 @@ export default function Monitoring() {
 
         {/* 监控仪表盘 */}
         <TabsContent value="dashboards" className="space-y-4">
+          {/* 容器资源监控 */}
+          <ContainerResourceChart />
+
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">

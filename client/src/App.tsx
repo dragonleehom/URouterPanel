@@ -30,6 +30,7 @@ import WOLManagement from "./pages/WOLManagement";
 import RoutingManagement from "./pages/RoutingManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import AppStore from "./pages/AppStore";
+import DockerNetworkManagement from "./pages/DockerNetworkManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -60,6 +61,7 @@ function Router() {
         <Route path="/mac" component={MACManagement} />
         <Route path="/wol" component={WOLManagement} />
         <Route path="/appstore" component={AppStore} />
+        <Route path="/docker-networks" component={DockerNetworkManagement} />
         <Route path="/vms">
           <PlaceholderPage
             title="虚拟机管理"

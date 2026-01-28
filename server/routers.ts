@@ -3,6 +3,8 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { appStoreRouter } from "./appStoreRouter";
 import { containerRouter } from "./containerRouter";
+import { containerMonitorRouter } from "./containerMonitorRouter";
+import { networkRouter } from "./networkRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from "./api-client";
 import { z } from "zod";
@@ -19,6 +21,8 @@ export const appRouter = router({
   system: systemRouter,
   appStore: appStoreRouter,
   container: containerRouter,
+  containerMonitor: containerMonitorRouter,
+  network: networkRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
