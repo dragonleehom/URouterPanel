@@ -117,12 +117,12 @@ export default function DHCPDNSManagement() {
   // 配置表单状态
   const [configForm, setConfigForm] = useState({
     interface: "",
-    start_ip: "",
-    end_ip: "",
-    netmask: "",
-    gateway: "",
+    dhcp_start: "",
+    dhcp_end: "",
     dns_servers: "",
-    lease_time: "",
+    dhcp_time: "",
+    domain: "",
+    enabled: true,
   });
 
   // 静态租约表单状态
@@ -137,12 +137,12 @@ export default function DHCPDNSManagement() {
     if (config) {
       setConfigForm({
         interface: config.interface || "",
-        start_ip: config.start_ip || "",
-        end_ip: config.end_ip || "",
-        netmask: config.netmask || "",
-        gateway: config.gateway || "",
+        dhcp_start: config.dhcp_start || "",
+        dhcp_end: config.dhcp_end || "",
         dns_servers: config.dns_servers?.join(",") || "",
-        lease_time: config.lease_time?.toString() || "",
+        dhcp_time: config.dhcp_time || "",
+        domain: config.domain || "",
+        enabled: config.enabled !== false,
       });
       setConfigDialogOpen(true);
     }
@@ -150,19 +150,19 @@ export default function DHCPDNSManagement() {
 
   // 提交配置
   const handleSubmitConfig = () => {
-    if (!configForm.interface || !configForm.start_ip || !configForm.end_ip) {
+    if (!configForm.interface || !configForm.dhcp_start || !configForm.dhcp_end) {
       toast.error("请填写必填项");
       return;
     }
 
     configureMutation.mutate({
       interface: configForm.interface,
-      start_ip: configForm.start_ip,
-      end_ip: configForm.end_ip,
-      netmask: configForm.netmask || "255.255.255.0",
-      gateway: configForm.gateway,
+      dhcp_start: configForm.dhcp_start,
+      dhcp_end: configForm.dhcp_end,
+      dhcp_time: configForm.dhcp_time || "12h",
       dns_servers: configForm.dns_servers ? configForm.dns_servers.split(",").map(s => s.trim()) : [],
-      lease_time: configForm.lease_time ? parseInt(configForm.lease_time) : 86400,
+      domain: configForm.domain,
+      enabled: configForm.enabled,
     });
   };
 
@@ -315,19 +315,12 @@ export default function DHCPDNSManagement() {
                   <div>
                     <Label>IP范围</Label>
                     <p className="text-sm mt-1">
-                      {config.start_ip && config.end_ip
-                        ? `${config.start_ip} - ${config.end_ip}`
+                      {config.dhcp_start && config.dhcp_end
+                        ? `${config.dhcp_start} - ${config.dhcp_end}`
                         : "未配置"}
                     </p>
                   </div>
-                  <div>
-                    <Label>子网掩码</Label>
-                    <p className="text-sm mt-1">{config.netmask || "未配置"}</p>
-                  </div>
-                  <div>
-                    <Label>网关</Label>
-                    <p className="text-sm mt-1">{config.gateway || "未配置"}</p>
-                  </div>
+
                   <div>
                     <Label>DNS服务器</Label>
                     <p className="text-sm mt-1">
@@ -337,7 +330,7 @@ export default function DHCPDNSManagement() {
                   <div>
                     <Label>租约时间</Label>
                     <p className="text-sm mt-1">
-                      {config.lease_time ? `${config.lease_time}秒` : "未配置"}
+                      {config.dhcp_time || "未配置"}
                     </p>
                   </div>
                 </div>
@@ -460,49 +453,27 @@ export default function DHCPDNSManagement() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="start_ip">起始IP *</Label>
+                <Label htmlFor="dhcp_start">起始IP *</Label>
                 <Input
-                  id="start_ip"
-                  value={configForm.start_ip}
+                  id="dhcp_start"
+                  value={configForm.dhcp_start}
                   onChange={(e) =>
-                    setConfigForm({ ...configForm, start_ip: e.target.value })
+                    setConfigForm({ ...configForm, dhcp_start: e.target.value })
                   }
-                  placeholder="192.168.1.100"
+                  placeholder="192.168.188.100"
                 />
               </div>
               <div>
-                <Label htmlFor="end_ip">结束IP *</Label>
+                <Label htmlFor="dhcp_end">结束IP *</Label>
                 <Input
-                  id="end_ip"
-                  value={configForm.end_ip}
+                  id="dhcp_end"
+                  value={configForm.dhcp_end}
                   onChange={(e) =>
-                    setConfigForm({ ...configForm, end_ip: e.target.value })
+                    setConfigForm({ ...configForm, dhcp_end: e.target.value })
                   }
-                  placeholder="192.168.1.200"
+                  placeholder="192.168.188.200"
                 />
               </div>
-            </div>
-            <div>
-              <Label htmlFor="netmask">子网掩码</Label>
-              <Input
-                id="netmask"
-                value={configForm.netmask}
-                onChange={(e) =>
-                  setConfigForm({ ...configForm, netmask: e.target.value })
-                }
-                placeholder="255.255.255.0"
-              />
-            </div>
-            <div>
-              <Label htmlFor="gateway">网关</Label>
-              <Input
-                id="gateway"
-                value={configForm.gateway}
-                onChange={(e) =>
-                  setConfigForm({ ...configForm, gateway: e.target.value })
-                }
-                placeholder="192.168.1.1"
-              />
             </div>
             <div>
               <Label htmlFor="dns_servers">DNS服务器(逗号分隔)</Label>
@@ -516,15 +487,25 @@ export default function DHCPDNSManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="lease_time">租约时间(秒)</Label>
+              <Label htmlFor="dhcp_time">租约时间</Label>
               <Input
-                id="lease_time"
-                type="number"
-                value={configForm.lease_time}
+                id="dhcp_time"
+                value={configForm.dhcp_time}
                 onChange={(e) =>
-                  setConfigForm({ ...configForm, lease_time: e.target.value })
+                  setConfigForm({ ...configForm, dhcp_time: e.target.value })
                 }
-                placeholder="86400"
+                placeholder="12h"
+              />
+            </div>
+            <div>
+              <Label htmlFor="domain">域名(可选)</Label>
+              <Input
+                id="domain"
+                value={configForm.domain}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, domain: e.target.value })
+                }
+                placeholder="local"
               />
             </div>
           </div>

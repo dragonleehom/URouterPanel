@@ -13,6 +13,7 @@ import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { pythonAPI } from './api-client';
 import * as networkInterfaceService from './services/networkInterfaceService';
 import * as wirelessService from './services/wirelessService';
+import * as dhcpService from './services/dhcpService';
 import { z } from "zod";
 import {
   executePing,
@@ -245,40 +246,52 @@ export const appRouter = router({
   // ==================== DHCP/DNS管理路由 ====================
   dhcpDns: router({
     getConfig: publicProcedure.query(async () => {
-      return await pythonAPI.getDHCPConfig();
+      return await dhcpService.getDHCPConfig();
     }),
     configure: publicProcedure
-      .input(z.any())
+      .input(z.object({
+        interface: z.string(),
+        dhcp_start: z.string(),
+        dhcp_end: z.string(),
+        dhcp_time: z.string(),
+        dns_servers: z.array(z.string()),
+        domain: z.string().optional(),
+        enabled: z.boolean(),
+      }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.configureDHCP(input);
+        return await dhcpService.configureDHCP(input);
       }),
     getLeases: publicProcedure.query(async () => {
-      return await pythonAPI.getDHCPLeases();
+      return await dhcpService.getDHCPLeases();
     }),
     getStaticLeases: publicProcedure.query(async () => {
-      return await pythonAPI.getStaticLeases();
+      return await dhcpService.getStaticLeases();
     }),
     addStaticLease: publicProcedure
-      .input(z.any())
+      .input(z.object({
+        mac: z.string(),
+        ip: z.string(),
+        hostname: z.string().optional(),
+      }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.addStaticLease(input);
+        return await dhcpService.addStaticLease(input);
       }),
     deleteStaticLease: publicProcedure
       .input(z.object({ mac: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.deleteStaticLease(input.mac);
+        return await dhcpService.deleteStaticLease(input.mac);
       }),
     getStatus: publicProcedure.query(async () => {
-      return await pythonAPI.getDHCPDNSStatus();
+      return await dhcpService.getDHCPStatus();
     }),
     start: publicProcedure.mutation(async () => {
-      return await pythonAPI.startDHCPDNS();
+      return await dhcpService.startDHCP();
     }),
     stop: publicProcedure.mutation(async () => {
-      return await pythonAPI.stopDHCPDNS();
+      return await dhcpService.stopDHCP();
     }),
     restart: publicProcedure.mutation(async () => {
-      return await pythonAPI.restartDHCPDNS();
+      return await dhcpService.restartDHCP();
     }),
   }),
 
