@@ -129,6 +129,89 @@ sudo systemctl restart networking
 sudo systemctl restart dnsmasq
 ```
 
+## 代码更新
+
+### 自动更新(推荐)
+
+当GitHub仓库有新代码更新时,使用update.sh脚本一键更新:
+
+```bash
+cd /path/to/urouteros
+sudo ./scripts/update.sh
+```
+
+更新脚本将自动完成:
+1. 停止URouterOS服务
+2. 备份当前代码到 `/var/backups/urouteros/`
+3. 从GitHub拉取最新代码
+4. 检查并安装新增依赖
+5. 运行数据库迁移
+6. 重新构建应用
+7. 重启服务
+
+更新过程预计耗时: 3-5分钟
+
+### 手动更新
+
+如果需要手动控制更新过程:
+
+```bash
+cd /path/to/urouteros
+
+# 1. 停止服务
+sudo systemctl stop urouteros
+
+# 2. 备份代码(可选)
+tar -czf ~/urouteros_backup_$(date +%Y%m%d).tar.gz .
+
+# 3. 拉取最新代码
+git pull origin main
+
+# 4. 安装依赖
+pnpm install
+
+# 5. 运行数据库迁移
+pnpm db:push
+
+# 6. 重新构建
+pnpm build
+
+# 7. 启动服务
+sudo systemctl start urouteros
+```
+
+### 回滚到之前版本
+
+如果更新后出现问题,可以回滚到备份版本:
+
+```bash
+# 1. 停止服务
+sudo systemctl stop urouteros
+
+# 2. 恢复备份
+sudo tar -xzf /var/backups/urouteros/urouteros_backup_YYYYMMDD_HHMMSS.tar.gz -C /path/to/urouteros
+
+# 3. 启动服务
+sudo systemctl start urouteros
+```
+
+或者使用Git回滚到指定版本:
+
+```bash
+cd /path/to/urouteros
+
+# 查看提交历史
+git log --oneline -10
+
+# 回滚到指定版本
+git reset --hard <commit-hash>
+
+# 重新构建并重启
+pnpm install
+pnpm build
+sudo systemctl restart urouteros
+```
+
 ## 服务管理
 
 ### 常用命令
