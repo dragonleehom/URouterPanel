@@ -228,24 +228,8 @@ class PythonAPIClient {
   /**
    * 获取路由表
    */
-  async getRoutes(table: string = 'main') {
-    const response = await this.client.get('/api/network/routes', { params: { table } });
-    return response.data;
-  }
-
-  /**
-   * 添加路由
-   */
-  async addRoute(route: any) {
-    const response = await this.client.post('/api/network/routes', route);
-    return response.data;
-  }
-
-  /**
-   * 删除路由
-   */
-  async deleteRoute(route: any) {
-    const response = await this.client.delete('/api/network/routes', { data: route });
+  async getRoutes() {
+    const response = await this.client.get('/api/routing/routes');
     return response.data;
   }
 
@@ -253,19 +237,55 @@ class PythonAPIClient {
    * 获取默认网关
    */
   async getDefaultGateway() {
-    const response = await this.client.get('/api/network/routes/default');
+    const response = await this.client.get('/api/routing/routes/default');
     return response.data;
   }
 
   /**
    * 设置默认网关
    */
-  async setDefaultGateway(gateway: string, device?: string) {
-    const response = await this.client.post('/api/network/routes/default', null, {
-      params: { gateway, device }
+  async setDefaultGateway(gateway: string, interfaceName?: string, metric?: number) {
+    const response = await this.client.post('/api/routing/routes/default', null, {
+      params: { gateway, interface: interfaceName, metric }
     });
     return response.data;
   }
+
+  /**
+   * 添加静态路由
+   */
+  async addStaticRoute(route: any) {
+    const response = await this.client.post('/api/routing/routes', route);
+    return response.data;
+  }
+
+  /**
+   * 删除静态路由
+   */
+  async deleteStaticRoute(destination: string) {
+    const response = await this.client.delete('/api/routing/routes', {
+      params: { destination }
+    });
+    return response.data;
+  }
+
+  /**
+   * 获取ARP表(邻居表)
+   */
+  async getArpTable() {
+    const response = await this.client.get('/api/routing/neighbors');
+    return response.data;
+  }
+
+  /**
+   * 获取路由状态
+   */
+  async getRoutingStatus() {
+    const response = await this.client.get('/api/routing/status');
+    return response.data;
+  }
+
+
 
   /**
    * 获取策略路由规则

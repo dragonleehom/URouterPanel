@@ -149,19 +149,18 @@ export const appRouter = router({
   // ==================== 路由管理路由 ====================
   routes: router({
     list: publicProcedure
-      .input(z.object({ table: z.string().default('main') }))
-      .query(async ({ input }) => {
-        return await pythonAPI.getRoutes(input.table);
+      .query(async () => {
+        return await pythonAPI.getRoutes();
       }),
     add: publicProcedure
       .input(z.any())
       .mutation(async ({ input }) => {
-        return await pythonAPI.addRoute(input);
+        return await pythonAPI.addStaticRoute(input);
       }),
     delete: publicProcedure
-      .input(z.any())
+      .input(z.object({ destination: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.deleteRoute(input);
+        return await pythonAPI.deleteStaticRoute(input.destination);
       }),
     getDefaultGateway: publicProcedure.query(async () => {
       return await pythonAPI.getDefaultGateway();
@@ -169,19 +168,18 @@ export const appRouter = router({
     setDefaultGateway: publicProcedure
       .input(z.object({
         gateway: z.string(),
-        device: z.string().optional()
+        interface: z.string().optional(),
+        metric: z.number().optional()
       }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.setDefaultGateway(input.gateway, input.device);
+        return await pythonAPI.setDefaultGateway(input.gateway, input.interface, input.metric);
       }),
-    getPolicyRules: publicProcedure.query(async () => {
-      return await pythonAPI.getPolicyRules();
+    getArpTable: publicProcedure.query(async () => {
+      return await pythonAPI.getArpTable();
     }),
-    addPolicyRule: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.addPolicyRule(input);
-      }),
+    getStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getRoutingStatus();
+    }),
   }),
 
   // ==================== DHCP/DNS管理路由 ====================
