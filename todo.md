@@ -247,10 +247,14 @@
   - [ ] 创建/删除容器
   - [ ] 查看容器日志
 
-## 部署脚本修复 (紧急)
+## 部署脚本修复 (已完成)
 - [x] 修夏deploy.sh中的Python包管理错误(externally-managed-environment)
 - [x] 使用Python虚拟环境替代系统级pip安装
 - [x] 更新systemd服务配置使用虚拟环境
 - [x] 更新.gitignore忽略虚拟环境目录
-- [x] 更新GitHub仓库
-- [ ] 在Ubuntu VM上测试修复后的部署脚本
+- [x] 解决frontend目录空的问题
+- [x] 复制完整frontend代码到URouterPanel仓库
+- [x] 解决git submodule问题
+- [x] 成功推送171个文件到GitHub (b16cd35)
+- [x] 验证GitHub上的frontend目录完整性
+- [ ] 在Ubuntu VM上测试部署脚本
