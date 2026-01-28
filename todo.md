@@ -475,3 +475,49 @@
 - [x] 实现默认网关设置功能
 - [x] 实现ARP表展示
 - [x] 在App.tsx中注册/routing路由
+
+
+## VPN管理功能实现
+
+### 后端API开发 ✅
+- [x] 创建vpn.py API模块
+- [x] 实现OpenVPN服务器配置API
+- [x] 实现OpenVPN客户端管理API
+- [x] 实现OpenVPN证书生成API
+- [x] 实现WireGuard服务器配置API
+- [x] 实现WireGuard对等节点管理API
+- [x] 实现WireGuard密钥生成API
+- [x] 实现Tailscale集成API
+- [x] 实现VPN服务启停控制API
+- [x] 实现VPN状态查询API
+- [x] 在main.py中注册VPN路由
+
+### 前端API集成 ✅
+- [x] 更新api-client.ts添加VPN API方法
+- [x] 更新routers.ts添加VPN路由
+- [x] TypeScript编译验证
+- [x] 前端tRPC连接测试通过
+
+### VPN管理页面 ✅
+- [x] 创建VPNManagement.tsx页面
+- [x] 实现OpenVPN配置界面
+- [x] 实现OpenVPN客户端管理
+- [x] 实现WireGuard配置界面
+- [x] 实现WireGuard对等节点管理
+- [x] 实现Tailscale控制界面
+- [x] 使用sonner toast替换所有通知
+- [x] TypeScript编译通过
+
+### 前端页面重构
+- [ ] 重写VPNManagement.tsx集成真实API
+- [ ] 实现OpenVPN配置界面
+- [ ] 实现WireGuard配置界面
+- [ ] 实现Tailscale配置界面
+- [ ] 实现客户端管理功能
+- [ ] 实现证书/密钥生成功能
+- [ ] 实现服务控制功能
+
+### 测试验证
+- [ ] 后端API测试
+- [ ] 前端tRPC连接测试
+- [ ] TypeScript编译测试

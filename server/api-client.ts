@@ -601,79 +601,7 @@ class PythonAPIClient {
     return response.data;
   }
 
-  // ==================== VPN管理 API ====================
 
-  /**
-   * 获取OpenVPN配置
-   */
-  async getOpenVPNConfig() {
-    const response = await this.client.get('/api/network/vpn/openvpn/config');
-    return response.data;
-  }
-
-  /**
-   * 配置OpenVPN服务器
-   */
-  async configureOpenVPN(config: any) {
-    const response = await this.client.post('/api/network/vpn/openvpn/configure', config);
-    return response.data;
-  }
-
-  /**
-   * 启动OpenVPN服务
-   */
-  async startOpenVPN() {
-    const response = await this.client.post('/api/network/vpn/openvpn/start');
-    return response.data;
-  }
-
-  /**
-   * 停止OpenVPN服务
-   */
-  async stopOpenVPN() {
-    const response = await this.client.post('/api/network/vpn/openvpn/stop');
-    return response.data;
-  }
-
-  /**
-   * 获取WireGuard配置
-   */
-  async getWireGuardConfig() {
-    const response = await this.client.get('/api/network/vpn/wireguard/config');
-    return response.data;
-  }
-
-  /**
-   * 配置WireGuard服务器
-   */
-  async configureWireGuard(config: any) {
-    const response = await this.client.post('/api/network/vpn/wireguard/configure', config);
-    return response.data;
-  }
-
-  /**
-   * 启动WireGuard服务
-   */
-  async startWireGuard() {
-    const response = await this.client.post('/api/network/vpn/wireguard/start');
-    return response.data;
-  }
-
-  /**
-   * 停止WireGuard服务
-   */
-  async stopWireGuard() {
-    const response = await this.client.post('/api/network/vpn/wireguard/stop');
-    return response.data;
-  }
-
-  /**
-   * 获取VPN客户端列表
-   */
-  async getVPNClients() {
-    const response = await this.client.get('/api/network/vpn/clients');
-    return response.data;
-  }
 
   // ==================== IPv6管理 API ====================
 
@@ -1084,6 +1012,190 @@ class PythonAPIClient {
    */
   async getGPUInfo() {
     const response = await this.client.get('/api/system/gpu');
+    return response.data;
+  }
+
+  // ==================== VPN管理 API ====================
+
+  /**
+   * 获取所有VPN服务状态
+   */
+  async getVPNStatus() {
+    const response = await this.client.get('/api/vpn/status');
+    return response.data;
+  }
+
+  // OpenVPN API
+
+  /**
+   * 获取OpenVPN服务状态
+   */
+  async getOpenVPNStatus() {
+    const response = await this.client.get('/api/vpn/openvpn/status');
+    return response.data;
+  }
+
+  /**
+   * 获取OpenVPN配置
+   */
+  async getOpenVPNConfig() {
+    const response = await this.client.get('/api/vpn/openvpn/config');
+    return response.data;
+  }
+
+  /**
+   * 配置OpenVPN服务器
+   */
+  async configureOpenVPN(config: any) {
+    const response = await this.client.post('/api/vpn/openvpn/configure', config);
+    return response.data;
+  }
+
+  /**
+   * 添加OpenVPN客户端
+   */
+  async addOpenVPNClient(client: any) {
+    const response = await this.client.post('/api/vpn/openvpn/client/add', client);
+    return response.data;
+  }
+
+  /**
+   * 删除OpenVPN客户端
+   */
+  async deleteOpenVPNClient(clientName: string) {
+    const response = await this.client.delete(`/api/vpn/openvpn/client/${clientName}`);
+    return response.data;
+  }
+
+  /**
+   * 启动OpenVPN服务
+   */
+  async startOpenVPN() {
+    const response = await this.client.post('/api/vpn/openvpn/start');
+    return response.data;
+  }
+
+  /**
+   * 停止OpenVPN服务
+   */
+  async stopOpenVPN() {
+    const response = await this.client.post('/api/vpn/openvpn/stop');
+    return response.data;
+  }
+
+  /**
+   * 重启OpenVPN服务
+   */
+  async restartOpenVPN() {
+    const response = await this.client.post('/api/vpn/openvpn/restart');
+    return response.data;
+  }
+
+  // WireGuard API
+
+  /**
+   * 获取WireGuard服务状态
+   */
+  async getWireGuardStatus() {
+    const response = await this.client.get('/api/vpn/wireguard/status');
+    return response.data;
+  }
+
+  /**
+   * 获取WireGuard配置
+   */
+  async getWireGuardConfig() {
+    const response = await this.client.get('/api/vpn/wireguard/config');
+    return response.data;
+  }
+
+  /**
+   * 配置WireGuard服务器
+   */
+  async configureWireGuard(config: any) {
+    const response = await this.client.post('/api/vpn/wireguard/configure', config);
+    return response.data;
+  }
+
+  /**
+   * 添加WireGuard对等节点
+   */
+  async addWireGuardPeer(peer: any) {
+    const response = await this.client.post('/api/vpn/wireguard/peer/add', peer);
+    return response.data;
+  }
+
+  /**
+   * 删除WireGuard对等节点
+   */
+  async deleteWireGuardPeer(publicKey: string) {
+    const response = await this.client.delete(`/api/vpn/wireguard/peer/${publicKey}`);
+    return response.data;
+  }
+
+  /**
+   * 启动WireGuard服务
+   */
+  async startWireGuard() {
+    const response = await this.client.post('/api/vpn/wireguard/start');
+    return response.data;
+  }
+
+  /**
+   * 停止WireGuard服务
+   */
+  async stopWireGuard() {
+    const response = await this.client.post('/api/vpn/wireguard/stop');
+    return response.data;
+  }
+
+  /**
+   * 重启WireGuard服务
+   */
+  async restartWireGuard() {
+    const response = await this.client.post('/api/vpn/wireguard/restart');
+    return response.data;
+  }
+
+  // Tailscale API
+
+  /**
+   * 获取Tailscale服务状态
+   */
+  async getTailscaleStatus() {
+    const response = await this.client.get('/api/vpn/tailscale/status');
+    return response.data;
+  }
+
+  /**
+   * 登录Tailscale
+   */
+  async loginTailscale() {
+    const response = await this.client.post('/api/vpn/tailscale/login');
+    return response.data;
+  }
+
+  /**
+   * 登出Tailscale
+   */
+  async logoutTailscale() {
+    const response = await this.client.post('/api/vpn/tailscale/logout');
+    return response.data;
+  }
+
+  /**
+   * 启动Tailscale服务
+   */
+  async startTailscale() {
+    const response = await this.client.post('/api/vpn/tailscale/start');
+    return response.data;
+  }
+
+  /**
+   * 停止Tailscale服务
+   */
+  async stopTailscale() {
+    const response = await this.client.post('/api/vpn/tailscale/stop');
     return response.data;
   }
 }

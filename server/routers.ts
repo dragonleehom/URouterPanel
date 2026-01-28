@@ -335,6 +335,15 @@ export const appRouter = router({
 
   // ==================== VPN管理路由 ====================
   vpn: router({
+    // 获取所有VPN服务状态
+    getStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getVPNStatus();
+    }),
+
+    // OpenVPN
+    getOpenVPNStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getOpenVPNStatus();
+    }),
     getOpenVPNConfig: publicProcedure.query(async () => {
       return await pythonAPI.getOpenVPNConfig();
     }),
@@ -343,11 +352,29 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await pythonAPI.configureOpenVPN(input);
       }),
+    addOpenVPNClient: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        return await pythonAPI.addOpenVPNClient(input);
+      }),
+    deleteOpenVPNClient: publicProcedure
+      .input(z.string())
+      .mutation(async ({ input }) => {
+        return await pythonAPI.deleteOpenVPNClient(input);
+      }),
     startOpenVPN: publicProcedure.mutation(async () => {
       return await pythonAPI.startOpenVPN();
     }),
     stopOpenVPN: publicProcedure.mutation(async () => {
       return await pythonAPI.stopOpenVPN();
+    }),
+    restartOpenVPN: publicProcedure.mutation(async () => {
+      return await pythonAPI.restartOpenVPN();
+    }),
+
+    // WireGuard
+    getWireGuardStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getWireGuardStatus();
     }),
     getWireGuardConfig: publicProcedure.query(async () => {
       return await pythonAPI.getWireGuardConfig();
@@ -357,14 +384,41 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await pythonAPI.configureWireGuard(input);
       }),
+    addWireGuardPeer: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        return await pythonAPI.addWireGuardPeer(input);
+      }),
+    deleteWireGuardPeer: publicProcedure
+      .input(z.string())
+      .mutation(async ({ input }) => {
+        return await pythonAPI.deleteWireGuardPeer(input);
+      }),
     startWireGuard: publicProcedure.mutation(async () => {
       return await pythonAPI.startWireGuard();
     }),
     stopWireGuard: publicProcedure.mutation(async () => {
       return await pythonAPI.stopWireGuard();
     }),
-    getClients: publicProcedure.query(async () => {
-      return await pythonAPI.getVPNClients();
+    restartWireGuard: publicProcedure.mutation(async () => {
+      return await pythonAPI.restartWireGuard();
+    }),
+
+    // Tailscale
+    getTailscaleStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getTailscaleStatus();
+    }),
+    loginTailscale: publicProcedure.mutation(async () => {
+      return await pythonAPI.loginTailscale();
+    }),
+    logoutTailscale: publicProcedure.mutation(async () => {
+      return await pythonAPI.logoutTailscale();
+    }),
+    startTailscale: publicProcedure.mutation(async () => {
+      return await pythonAPI.startTailscale();
+    }),
+    stopTailscale: publicProcedure.mutation(async () => {
+      return await pythonAPI.stopTailscale();
     }),
   }),
 

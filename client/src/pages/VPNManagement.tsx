@@ -1,499 +1,596 @@
-/**
- * VPN服务器管理页面
- * 支持OpenVPN和WireGuard两种VPN协议
- */
-
 import { useState } from "react";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Download, Key, Plus, Power, Shield, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
-
-interface VPNClient {
-  id: string;
-  name: string;
-  type: "openvpn" | "wireguard";
-  ipAddress: string;
-  status: "connected" | "disconnected";
-  connectedAt?: string;
-  dataTransferred: { upload: string; download: string };
-}
+import { Loader2, Play, Square, RefreshCw, Plus, Trash2, Shield, Key, Users } from "lucide-react";
 
 export default function VPNManagement() {
-  const [activeTab, setActiveTab] = useState("openvpn");
+  const [openVPNClientDialog, setOpenVPNClientDialog] = useState(false);
+  const [wgPeerDialog, setWgPeerDialog] = useState(false);
 
-  // OpenVPN状态
-  const [openVPNEnabled, setOpenVPNEnabled] = useState(false);
-  const [openVPNPort, setOpenVPNPort] = useState("1194");
-  const [openVPNProtocol, setOpenVPNProtocol] = useState("udp");
-  const [openVPNSubnet, setOpenVPNSubnet] = useState("10.8.0.0/24");
-  const [openVPNDNS, setOpenVPNDNS] = useState("8.8.8.8");
-  const [openVPNCompression, setOpenVPNCompression] = useState(true);
+  // 获取所有VPN状态
+  const { data: vpnStatus, isLoading: statusLoading, refetch: refetchStatus } = trpc.vpn.getStatus.useQuery();
 
-  // WireGuard状态
-  const [wireguardEnabled, setWireguardEnabled] = useState(false);
-  const [wireguardPort, setWireguardPort] = useState("51820");
-  const [wireguardSubnet, setWireguardSubnet] = useState("10.9.0.0/24");
-  const [wireguardDNS, setWireguardDNS] = useState("1.1.1.1");
-  const [wireguardPublicKey, setWireguardPublicKey] = useState("generated_public_key_here");
-
-  // 模拟VPN客户端列表
-  const [vpnClients] = useState<VPNClient[]>([
-    {
-      id: "1",
-      name: "client1",
-      type: "openvpn",
-      ipAddress: "10.8.0.2",
-      status: "connected",
-      connectedAt: "2024-01-26 14:30:00",
-      dataTransferred: { upload: "125 MB", download: "450 MB" },
+  // OpenVPN状态和配置
+  const { data: ovpnConfig, refetch: refetchOvpnConfig } = trpc.vpn.getOpenVPNConfig.useQuery();
+  const startOpenVPN = trpc.vpn.startOpenVPN.useMutation({
+    onSuccess: () => {
+      toast.success("OpenVPN已启动");
+      refetchStatus();
     },
-    {
-      id: "2",
-      name: "mobile-device",
-      type: "wireguard",
-      ipAddress: "10.9.0.2",
-      status: "connected",
-      connectedAt: "2024-01-26 10:15:00",
-      dataTransferred: { upload: "80 MB", download: "320 MB" },
+    onError: (error) => toast.error(`启动失败: ${error.message}`),
+  });
+  const stopOpenVPN = trpc.vpn.stopOpenVPN.useMutation({
+    onSuccess: () => {
+      toast.success("OpenVPN已停止");
+      refetchStatus();
     },
-    {
-      id: "3",
-      name: "laptop",
-      type: "openvpn",
-      ipAddress: "10.8.0.3",
-      status: "disconnected",
-      dataTransferred: { upload: "0 MB", download: "0 MB" },
+    onError: (error) => toast.error(`停止失败: ${error.message}`),
+  });
+  const restartOpenVPN = trpc.vpn.restartOpenVPN.useMutation({
+    onSuccess: () => {
+      toast.success("OpenVPN已重启");
+      refetchStatus();
     },
-  ]);
+    onError: (error) => toast.error(`重启失败: ${error.message}`),
+  });
+  const configureOpenVPN = trpc.vpn.configureOpenVPN.useMutation({
+    onSuccess: () => {
+      toast.success("OpenVPN配置已更新");
+      refetchOvpnConfig();
+    },
+    onError: (error) => toast.error(`配置失败: ${error.message}`),
+  });
+  const addOpenVPNClient = trpc.vpn.addOpenVPNClient.useMutation({
+    onSuccess: () => {
+      toast.success("客户端已添加");
+      setOpenVPNClientDialog(false);
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`添加失败: ${error.message}`),
+  });
+  const deleteOpenVPNClient = trpc.vpn.deleteOpenVPNClient.useMutation({
+    onSuccess: () => {
+      toast.success("客户端已删除");
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`删除失败: ${error.message}`),
+  });
 
-  const handleSaveOpenVPN = () => {
-    toast.success("OpenVPN配置已保存");
-  };
+  // WireGuard状态和配置
+  const { data: wgConfig, refetch: refetchWgConfig } = trpc.vpn.getWireGuardConfig.useQuery();
+  const startWireGuard = trpc.vpn.startWireGuard.useMutation({
+    onSuccess: () => {
+      toast.success("WireGuard已启动");
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`启动失败: ${error.message}`),
+  });
+  const stopWireGuard = trpc.vpn.stopWireGuard.useMutation({
+    onSuccess: () => {
+      toast.success("WireGuard已停止");
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`停止失败: ${error.message}`),
+  });
+  const restartWireGuard = trpc.vpn.restartWireGuard.useMutation({
+    onSuccess: () => {
+      toast.success("WireGuard已重启");
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`重启失败: ${error.message}`),
+  });
+  const configureWireGuard = trpc.vpn.configureWireGuard.useMutation({
+    onSuccess: () => {
+      toast.success("WireGuard配置已更新");
+      refetchWgConfig();
+    },
+    onError: (error) => toast.error(`配置失败: ${error.message}`),
+  });
+  const addWireGuardPeer = trpc.vpn.addWireGuardPeer.useMutation({
+    onSuccess: () => {
+      toast.success("对等节点已添加");
+      setWgPeerDialog(false);
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`添加失败: ${error.message}`),
+  });
+  const deleteWireGuardPeer = trpc.vpn.deleteWireGuardPeer.useMutation({
+    onSuccess: () => {
+      toast.success("对等节点已删除");
+      refetchStatus();
+    },
+    onError: (error) => toast.error(`删除失败: ${error.message}`),
+  });
 
-  const handleSaveWireGuard = () => {
-    toast.success("WireGuard配置已保存");
-  };
+  // Tailscale状态
+  const { data: tsStatus, refetch: refetchTsStatus } = trpc.vpn.getTailscaleStatus.useQuery();
+  const loginTailscale = trpc.vpn.loginTailscale.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message || "请在浏览器中完成认证");
+      refetchTsStatus();
+    },
+    onError: (error) => toast.error(`登录失败: ${error.message}`),
+  });
+  const logoutTailscale = trpc.vpn.logoutTailscale.useMutation({
+    onSuccess: () => {
+      toast.success("Tailscale已登出");
+      refetchTsStatus();
+    },
+    onError: (error) => toast.error(`登出失败: ${error.message}`),
+  });
+  const startTailscale = trpc.vpn.startTailscale.useMutation({
+    onSuccess: () => {
+      toast.success("Tailscale已启动");
+      refetchTsStatus();
+    },
+    onError: (error) => toast.error(`启动失败: ${error.message}`),
+  });
+  const stopTailscale = trpc.vpn.stopTailscale.useMutation({
+    onSuccess: () => {
+      toast.success("Tailscale已停止");
+      refetchTsStatus();
+    },
+    onError: (error) => toast.error(`停止失败: ${error.message}`),
+  });
 
-  const handleGenerateClientConfig = (type: "openvpn" | "wireguard") => {
-    toast.success(`${type === "openvpn" ? "OpenVPN" : "WireGuard"}客户端配置已生成`);
-  };
+  // 表单状态
+  const [ovpnForm, setOvpnForm] = useState({
+    port: 1194,
+    protocol: "udp",
+    network: "10.8.0.0",
+    netmask: "255.255.255.0",
+    dns: ["8.8.8.8", "8.8.4.4"],
+  });
+  const [wgForm, setWgForm] = useState({
+    port: 51820,
+    address: "10.0.0.1/24",
+  });
+  const [clientName, setClientName] = useState("");
+  const [peerForm, setPeerForm] = useState({
+    name: "",
+    allowed_ips: "10.0.0.2/32",
+  });
 
-  const handleDeleteClient = (clientId: string) => {
-    toast.success("客户端已删除");
-  };
+  if (statusLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <DashboardLayout>
-      <div className="p-6 space-y-6">
-        {/* 页面标题 */}
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">VPN服务器</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            配置OpenVPN和WireGuard服务器,管理VPN客户端连接
-          </p>
-        </div>
-
-        {/* VPN服务器配置 */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="openvpn">OpenVPN</TabsTrigger>
-            <TabsTrigger value="wireguard">WireGuard</TabsTrigger>
-            <TabsTrigger value="clients">客户端管理</TabsTrigger>
-          </TabsList>
-
-          {/* OpenVPN配置 */}
-          <TabsContent value="openvpn" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>OpenVPN服务器</CardTitle>
-                    <CardDescription>
-                      配置OpenVPN服务器参数和网络设置
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="openvpn-enabled">启用服务</Label>
-                    <Switch
-                      id="openvpn-enabled"
-                      checked={openVPNEnabled}
-                      onCheckedChange={setOpenVPNEnabled}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="openvpn-port">监听端口</Label>
-                    <Input
-                      id="openvpn-port"
-                      value={openVPNPort}
-                      onChange={(e) => setOpenVPNPort(e.target.value)}
-                      placeholder="1194"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="openvpn-protocol">协议</Label>
-                    <Select value={openVPNProtocol} onValueChange={setOpenVPNProtocol}>
-                      <SelectTrigger id="openvpn-protocol">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="udp">UDP</SelectItem>
-                        <SelectItem value="tcp">TCP</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="openvpn-subnet">VPN子网</Label>
-                  <Input
-                    id="openvpn-subnet"
-                    value={openVPNSubnet}
-                    onChange={(e) => setOpenVPNSubnet(e.target.value)}
-                    placeholder="10.8.0.0/24"
-                  />
-                  <p className="text-xs text-gray-500">
-                    VPN客户端将从此子网分配IP地址
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="openvpn-dns">DNS服务器</Label>
-                  <Input
-                    id="openvpn-dns"
-                    value={openVPNDNS}
-                    onChange={(e) => setOpenVPNDNS(e.target.value)}
-                    placeholder="8.8.8.8"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="openvpn-compression">启用压缩</Label>
-                    <p className="text-xs text-gray-500">
-                      使用LZ4压缩算法减少数据传输量
-                    </p>
-                  </div>
-                  <Switch
-                    id="openvpn-compression"
-                    checked={openVPNCompression}
-                    onCheckedChange={setOpenVPNCompression}
-                  />
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleSaveOpenVPN}>
-                    <Shield className="w-4 h-4 mr-2" />
-                    保存配置
-                  </Button>
-                  <Button variant="outline" onClick={() => handleGenerateClientConfig("openvpn")}>
-                    <Download className="w-4 h-4 mr-2" />
-                    生成客户端配置
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 证书管理 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>证书管理</CardTitle>
-                <CardDescription>
-                  管理OpenVPN服务器和客户端证书
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Key className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium">服务器证书</span>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      有效期: 2024-01-01 至 2025-01-01
-                    </p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      重新生成
-                    </Button>
-                  </div>
-                  <div className="p-4 border border-gray-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Key className="w-4 h-4 text-green-600" />
-                      <span className="font-medium">CA证书</span>
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      有效期: 2024-01-01 至 2034-01-01
-                    </p>
-                    <Button variant="outline" size="sm" className="mt-2">
-                      下载证书
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* WireGuard配置 */}
-          <TabsContent value="wireguard" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>WireGuard服务器</CardTitle>
-                    <CardDescription>
-                      配置WireGuard服务器参数和密钥
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="wireguard-enabled">启用服务</Label>
-                    <Switch
-                      id="wireguard-enabled"
-                      checked={wireguardEnabled}
-                      onCheckedChange={setWireguardEnabled}
-                    />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="wireguard-port">监听端口</Label>
-                    <Input
-                      id="wireguard-port"
-                      value={wireguardPort}
-                      onChange={(e) => setWireguardPort(e.target.value)}
-                      placeholder="51820"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="wireguard-subnet">VPN子网</Label>
-                    <Input
-                      id="wireguard-subnet"
-                      value={wireguardSubnet}
-                      onChange={(e) => setWireguardSubnet(e.target.value)}
-                      placeholder="10.9.0.0/24"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="wireguard-dns">DNS服务器</Label>
-                  <Input
-                    id="wireguard-dns"
-                    value={wireguardDNS}
-                    onChange={(e) => setWireguardDNS(e.target.value)}
-                    placeholder="1.1.1.1"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="wireguard-publickey">服务器公钥</Label>
-                  <Textarea
-                    id="wireguard-publickey"
-                    value={wireguardPublicKey}
-                    readOnly
-                    className="font-mono text-xs"
-                    rows={2}
-                  />
-                  <p className="text-xs text-gray-500">
-                    客户端配置时需要使用此公钥
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleSaveWireGuard}>
-                    <Shield className="w-4 h-4 mr-2" />
-                    保存配置
-                  </Button>
-                  <Button variant="outline" onClick={() => handleGenerateClientConfig("wireguard")}>
-                    <Download className="w-4 h-4 mr-2" />
-                    生成客户端配置
-                  </Button>
-                  <Button variant="outline">
-                    <Key className="w-4 h-4 mr-2" />
-                    重新生成密钥对
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* WireGuard对等节点 */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>对等节点(Peers)</CardTitle>
-                    <CardDescription>
-                      管理WireGuard客户端对等节点
-                    </CardDescription>
-                  </div>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        添加对等节点
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>添加WireGuard对等节点</DialogTitle>
-                        <DialogDescription>
-                          配置新的WireGuard客户端对等节点
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="peer-name">节点名称</Label>
-                          <Input id="peer-name" placeholder="my-device" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="peer-publickey">客户端公钥</Label>
-                          <Textarea
-                            id="peer-publickey"
-                            placeholder="客户端生成的公钥"
-                            rows={2}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="peer-ip">分配IP地址</Label>
-                          <Input id="peer-ip" placeholder="10.9.0.2/32" />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button>添加节点</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {[
-                    { name: "mobile-device", ip: "10.9.0.2", status: "active" },
-                    { name: "laptop", ip: "10.9.0.3", status: "inactive" },
-                  ].map((peer, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Users className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="font-medium">{peer.name}</div>
-                          <div className="text-xs text-gray-500">{peer.ip}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={peer.status === "active" ? "default" : "secondary"}>
-                          {peer.status === "active" ? "活跃" : "离线"}
-                        </Badge>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* 客户端管理 */}
-          <TabsContent value="clients" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>VPN客户端连接</CardTitle>
-                <CardDescription>
-                  查看当前连接的VPN客户端和连接历史
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {vpnClients.map((client) => (
-                    <div
-                      key={client.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`w-2 h-2 rounded-full ${
-                          client.status === "connected" ? "bg-green-500" : "bg-gray-300"
-                        }`}></div>
-                        <div>
-                          <div className="font-medium">{client.name}</div>
-                          <div className="text-xs text-gray-500">
-                            {client.ipAddress} • {client.type === "openvpn" ? "OpenVPN" : "WireGuard"}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-sm">
-                          <div className="text-gray-500">上传/下载</div>
-                          <div className="font-medium">
-                            {client.dataTransferred.upload} / {client.dataTransferred.download}
-                          </div>
-                        </div>
-                        {client.status === "connected" && (
-                          <div className="text-sm">
-                            <div className="text-gray-500">连接时间</div>
-                            <div className="font-medium">{client.connectedAt}</div>
-                          </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClient(client.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* 使用说明 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>客户端配置说明</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-gray-700">
-                    <p className="font-medium mb-1">OpenVPN客户端</p>
-                    <p>
-                      下载生成的.ovpn配置文件,使用OpenVPN Connect或其他OpenVPN客户端导入配置文件即可连接。
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-gray-700">
-                    <p className="font-medium mb-1">WireGuard客户端</p>
-                    <p>
-                      下载生成的配置文件或扫描二维码,使用WireGuard官方客户端导入配置即可连接。
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">VPN服务器</h1>
+        <p className="text-muted-foreground">管理OpenVPN、WireGuard和Tailscale VPN服务</p>
       </div>
-    </DashboardLayout>
+
+      {/* 状态概览卡片 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">OpenVPN</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {vpnStatus?.openvpn.running ? (
+                <Badge variant="default">运行中</Badge>
+              ) : (
+                <Badge variant="secondary">已停止</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {vpnStatus?.openvpn.clients_connected || 0} 个客户端连接
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">WireGuard</CardTitle>
+            <Key className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {vpnStatus?.wireguard.running ? (
+                <Badge variant="default">运行中</Badge>
+              ) : (
+                <Badge variant="secondary">已停止</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {vpnStatus?.wireguard.peers_connected || 0} 个对等节点连接
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tailscale</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {vpnStatus?.tailscale.logged_in ? (
+                <Badge variant="default">已登录</Badge>
+              ) : (
+                <Badge variant="secondary">未登录</Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {vpnStatus?.tailscale.hostname || "未配置"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* VPN服务管理标签页 */}
+      <Tabs defaultValue="openvpn" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="openvpn">OpenVPN</TabsTrigger>
+          <TabsTrigger value="wireguard">WireGuard</TabsTrigger>
+          <TabsTrigger value="tailscale">Tailscale</TabsTrigger>
+        </TabsList>
+
+        {/* OpenVPN标签页 */}
+        <TabsContent value="openvpn" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>OpenVPN服务器配置</CardTitle>
+              <CardDescription>配置OpenVPN服务器参数</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>监听端口</Label>
+                  <Input
+                    type="number"
+                    value={ovpnForm.port}
+                    onChange={(e) => setOvpnForm({ ...ovpnForm, port: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>协议</Label>
+                  <Select value={ovpnForm.protocol} onValueChange={(v) => setOvpnForm({ ...ovpnForm, protocol: v })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="udp">UDP</SelectItem>
+                      <SelectItem value="tcp">TCP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>VPN网络</Label>
+                  <Input value={ovpnForm.network} onChange={(e) => setOvpnForm({ ...ovpnForm, network: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>子网掩码</Label>
+                  <Input value={ovpnForm.netmask} onChange={(e) => setOvpnForm({ ...ovpnForm, netmask: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => configureOpenVPN.mutate(ovpnForm)} disabled={configureOpenVPN.isPending}>
+                  {configureOpenVPN.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  保存配置
+                </Button>
+                <Button variant="outline" onClick={() => startOpenVPN.mutate()} disabled={startOpenVPN.isPending || vpnStatus?.openvpn.running}>
+                  <Play className="mr-2 h-4 w-4" />
+                  启动
+                </Button>
+                <Button variant="outline" onClick={() => stopOpenVPN.mutate()} disabled={stopOpenVPN.isPending || !vpnStatus?.openvpn.running}>
+                  <Square className="mr-2 h-4 w-4" />
+                  停止
+                </Button>
+                <Button variant="outline" onClick={() => restartOpenVPN.mutate()} disabled={restartOpenVPN.isPending}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  重启
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>客户端管理</CardTitle>
+                <CardDescription>管理OpenVPN客户端</CardDescription>
+              </div>
+              <Dialog open={openVPNClientDialog} onOpenChange={setOpenVPNClientDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    添加客户端
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>添加OpenVPN客户端</DialogTitle>
+                    <DialogDescription>创建新的客户端配置和证书</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>客户端名称</Label>
+                      <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="例如: laptop-john" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setOpenVPNClientDialog(false)}>
+                      取消
+                    </Button>
+                    <Button
+                      onClick={() => addOpenVPNClient.mutate({ name: clientName })}
+                      disabled={!clientName || addOpenVPNClient.isPending}
+                    >
+                      {addOpenVPNClient.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      添加
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>客户端名称</TableHead>
+                    <TableHead>状态</TableHead>
+                    <TableHead>IP地址</TableHead>
+                    <TableHead>连接时间</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vpnStatus?.openvpn.clients && vpnStatus.openvpn.clients.length > 0 ? (
+                    vpnStatus.openvpn.clients.map((client: any) => (
+                      <TableRow key={client.name}>
+                        <TableCell className="font-medium">{client.name}</TableCell>
+                        <TableCell>
+                          {client.connected ? <Badge variant="default">已连接</Badge> : <Badge variant="secondary">离线</Badge>}
+                        </TableCell>
+                        <TableCell>{client.ip || "-"}</TableCell>
+                        <TableCell>{client.connected_since || "-"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteOpenVPNClient.mutate(client.name)}
+                            disabled={deleteOpenVPNClient.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        暂无客户端
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* WireGuard标签页 */}
+        <TabsContent value="wireguard" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>WireGuard服务器配置</CardTitle>
+              <CardDescription>配置WireGuard服务器参数</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>监听端口</Label>
+                  <Input
+                    type="number"
+                    value={wgForm.port}
+                    onChange={(e) => setWgForm({ ...wgForm, port: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>服务器地址</Label>
+                  <Input value={wgForm.address} onChange={(e) => setWgForm({ ...wgForm, address: e.target.value })} />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={() => configureWireGuard.mutate(wgForm)} disabled={configureWireGuard.isPending}>
+                  {configureWireGuard.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  保存配置
+                </Button>
+                <Button variant="outline" onClick={() => startWireGuard.mutate()} disabled={startWireGuard.isPending || vpnStatus?.wireguard.running}>
+                  <Play className="mr-2 h-4 w-4" />
+                  启动
+                </Button>
+                <Button variant="outline" onClick={() => stopWireGuard.mutate()} disabled={stopWireGuard.isPending || !vpnStatus?.wireguard.running}>
+                  <Square className="mr-2 h-4 w-4" />
+                  停止
+                </Button>
+                <Button variant="outline" onClick={() => restartWireGuard.mutate()} disabled={restartWireGuard.isPending}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  重启
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>对等节点管理</CardTitle>
+                <CardDescription>管理WireGuard对等节点</CardDescription>
+              </div>
+              <Dialog open={wgPeerDialog} onOpenChange={setWgPeerDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    添加对等节点
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>添加WireGuard对等节点</DialogTitle>
+                    <DialogDescription>创建新的对等节点配置</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>节点名称</Label>
+                      <Input
+                        value={peerForm.name}
+                        onChange={(e) => setPeerForm({ ...peerForm, name: e.target.value })}
+                        placeholder="例如: phone-john"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>允许的IP</Label>
+                      <Input
+                        value={peerForm.allowed_ips}
+                        onChange={(e) => setPeerForm({ ...peerForm, allowed_ips: e.target.value })}
+                        placeholder="10.0.0.2/32"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setWgPeerDialog(false)}>
+                      取消
+                    </Button>
+                    <Button
+                      onClick={() => addWireGuardPeer.mutate(peerForm)}
+                      disabled={!peerForm.name || addWireGuardPeer.isPending}
+                    >
+                      {addWireGuardPeer.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      添加
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>节点名称</TableHead>
+                    <TableHead>公钥</TableHead>
+                    <TableHead>允许的IP</TableHead>
+                    <TableHead>最后握手</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vpnStatus?.wireguard.peers && vpnStatus.wireguard.peers.length > 0 ? (
+                    vpnStatus.wireguard.peers.map((peer: any) => (
+                      <TableRow key={peer.public_key}>
+                        <TableCell className="font-medium">{peer.name || "-"}</TableCell>
+                        <TableCell className="font-mono text-xs">{peer.public_key.substring(0, 20)}...</TableCell>
+                        <TableCell>{peer.allowed_ips}</TableCell>
+                        <TableCell>{peer.last_handshake || "从未"}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteWireGuardPeer.mutate(peer.public_key)}
+                            disabled={deleteWireGuardPeer.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        暂无对等节点
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tailscale标签页 */}
+        <TabsContent value="tailscale" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tailscale配置</CardTitle>
+              <CardDescription>Tailscale零配置VPN服务</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">登录状态</p>
+                    <p className="text-sm text-muted-foreground">
+                      {tsStatus?.logged_in ? `已登录到 ${tsStatus.tailnet}` : "未登录"}
+                    </p>
+                  </div>
+                  {tsStatus?.logged_in ? (
+                    <Badge variant="default">已登录</Badge>
+                  ) : (
+                    <Badge variant="secondary">未登录</Badge>
+                  )}
+                </div>
+                {tsStatus?.logged_in && (
+                  <>
+                    <div className="flex items-center justify-between pt-2">
+                      <div>
+                        <p className="font-medium">主机名</p>
+                        <p className="text-sm text-muted-foreground">{tsStatus.hostname}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Tailscale IP</p>
+                        <p className="text-sm text-muted-foreground">{tsStatus.ip}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {!tsStatus?.logged_in ? (
+                  <Button onClick={() => loginTailscale.mutate()} disabled={loginTailscale.isPending}>
+                    {loginTailscale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    登录Tailscale
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => logoutTailscale.mutate()} disabled={logoutTailscale.isPending}>
+                      {logoutTailscale.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      登出
+                    </Button>
+                    <Button variant="outline" onClick={() => startTailscale.mutate()} disabled={startTailscale.isPending || vpnStatus?.tailscale.running}>
+                      <Play className="mr-2 h-4 w-4" />
+                      启动
+                    </Button>
+                    <Button variant="outline" onClick={() => stopTailscale.mutate()} disabled={stopTailscale.isPending || !vpnStatus?.tailscale.running}>
+                      <Square className="mr-2 h-4 w-4" />
+                      停止
+                    </Button>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
