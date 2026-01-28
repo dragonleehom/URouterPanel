@@ -42,12 +42,17 @@ import {
 } from "@/components/ui/select";
 import { EditNetworkDialog } from "@/components/container/EditNetworkDialog";
 import { ContainerLogsDialog } from "@/components/container/ContainerLogsDialog";
+import { ComposeProjectDialog } from "@/components/container/ComposeProjectDialog";
 
 export default function ContainerManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [pullDialogOpen, setPullDialogOpen] = useState(false);
   const [editNetworkDialogOpen, setEditNetworkDialogOpen] = useState(false);
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
+  const [composeDialogOpen, setComposeDialogOpen] = useState(false);
+  const [composeConfigDialogOpen, setComposeConfigDialogOpen] = useState(false);
+  const [selectedComposeProject, setSelectedComposeProject] = useState<string | null>(null);
+  const [composeConfig, setComposeConfig] = useState("");
   const [selectedContainer, setSelectedContainer] = useState<{
     id: string;
     name: string;
@@ -81,6 +86,13 @@ export default function ContainerManagement() {
 
   // 获取虚拟网络列表
   const { data: virtualNetworks } = trpc.virtualNetwork.list.useQuery();
+
+  // 获取Compose项目列表
+  const {
+    data: composeProjects,
+    isLoading: isLoadingComposeProjects,
+    refetch: refetchComposeProjects,
+  } = trpc.container.listComposeProjects.useQuery();
 
   // 连接容器到虚拟网络
   const attachNetworkMutation = trpc.virtualNetwork.attachContainer.useMutation({
@@ -186,6 +198,57 @@ export default function ContainerManagement() {
     },
   });
 
+  // 启动Compose项目
+  const startComposeProjectMutation = trpc.container.startComposeProject.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        alert("项目已启动");
+        refetchComposeProjects();
+      } else {
+        alert(data.message);
+      }
+    },
+    onError: (error) => {
+      alert(`启动失败: ${error.message}`);
+    },
+  });
+
+  // 停止Compose项目
+  const stopComposeProjectMutation = trpc.container.stopComposeProject.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        alert("项目已停止");
+        refetchComposeProjects();
+      } else {
+        alert(data.message);
+      }
+    },
+    onError: (error) => {
+      alert(`停止失败: ${error.message}`);
+    },
+  });
+
+  // 删除Compose项目
+  const removeComposeProjectMutation = trpc.container.removeComposeProject.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        alert("项目已删除");
+        refetchComposeProjects();
+      } else {
+        alert(data.message);
+      }
+    },
+    onError: (error) => {
+      alert(`删除失败: ${error.message}`);
+    },
+  });
+
+  // 获取Compose项目配置
+  const getComposeConfigMutation = trpc.container.getComposeProjectConfig.useQuery(
+    { projectName: selectedComposeProject || "" },
+    { enabled: !!selectedComposeProject && composeConfigDialogOpen }
+  );
+
   const handleCreateContainer = () => {
     if (!newContainer.name || !newContainer.image) {
       alert("请填写容器名称和镜像");
@@ -235,6 +298,25 @@ export default function ContainerManagement() {
     }
   };
 
+  const handleStartComposeProject = (projectName: string) => {
+    startComposeProjectMutation.mutate({ projectName });
+  };
+
+  const handleStopComposeProject = (projectName: string) => {
+    stopComposeProjectMutation.mutate({ projectName });
+  };
+
+  const handleRemoveComposeProject = (projectName: string) => {
+    if (confirm(`确定要删除项目 "${projectName}" 吗?此操作将删除所有相关容器。`)) {
+      removeComposeProjectMutation.mutate({ projectName });
+    }
+  };
+
+  const handleViewComposeConfig = (projectName: string) => {
+    setSelectedComposeProject(projectName);
+    setComposeConfigDialogOpen(true);
+  };
+
   // Docker不可用提示
   if (dockerStatus && !dockerStatus.available) {
     return (
@@ -267,6 +349,11 @@ export default function ContainerManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setComposeDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            创建Compose项目
+          </Button>
+
           <Dialog open={pullDialogOpen} onOpenChange={setPullDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -661,6 +748,99 @@ export default function ContainerManagement() {
             </Card>
           )}
         </TabsContent>
+
+        {/* Compose项目列表 */}
+        <TabsContent value="compose" className="space-y-4">
+          {isLoadingComposeProjects ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+            </div>
+          ) : composeProjects && composeProjects.length > 0 ? (
+            <div className="space-y-2">
+              {composeProjects.map((project: any) => (
+                <Card key={project.name}>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded bg-purple-100 flex items-center justify-center">
+                          <Box className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {project.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {project.containers} 个容器
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              variant={
+                                project.status === "running"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {project.status === "running" ? "运行中" : "已停止"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {project.status !== "running" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStartComposeProject(project.name)}
+                            disabled={startComposeProjectMutation.isPending}
+                            title="启动项目"
+                          >
+                            <Play className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {project.status === "running" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStopComposeProject(project.name)}
+                            disabled={stopComposeProjectMutation.isPending}
+                            title="停止项目"
+                          >
+                            <Square className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewComposeConfig(project.name)}
+                          title="查看配置"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRemoveComposeProject(project.name)}
+                          disabled={removeComposeProjectMutation.isPending}
+                          title="删除项目"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center text-gray-500">
+                <Box className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p>暂无Compose项目</p>
+                <p className="text-sm mt-1">点击"创建Compose项目"按钮开始</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* 编辑网络对话框 */}
@@ -685,6 +865,45 @@ export default function ContainerManagement() {
           containerName={selectedContainer.name}
         />
       )}
+
+      {/* 创建Compose项目对话框 */}
+      <ComposeProjectDialog
+        open={composeDialogOpen}
+        onOpenChange={setComposeDialogOpen}
+        onSuccess={() => {
+          refetchComposeProjects();
+        }}
+      />
+
+      {/* 查看Compose配置对话框 */}
+      <Dialog open={composeConfigDialogOpen} onOpenChange={setComposeConfigDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>查看项目配置: {selectedComposeProject}</DialogTitle>
+            <DialogDescription>
+              docker-compose.yml 文件内容
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {getComposeConfigMutation.isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              </div>
+            ) : getComposeConfigMutation.data ? (
+              <pre className="p-4 bg-gray-50 rounded border text-sm font-mono overflow-x-auto">
+                {getComposeConfigMutation.data.config}
+              </pre>
+            ) : (
+              <p className="text-gray-500 text-center py-12">无法加载配置</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setComposeConfigDialogOpen(false)}>
+              关闭
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
