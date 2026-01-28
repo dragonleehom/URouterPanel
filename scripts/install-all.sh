@@ -65,10 +65,18 @@ echo "========================================="
 echo ""
 bash "$SCRIPT_DIR/deploy-app.sh"
 
-# 步骤4: 配置systemd服务
+# 步骤4: 配置sudo权限
 echo ""
 echo "========================================="
-echo "步骤 4/4: 配置systemd服务"
+echo "步骤 4/5: 配置sudo权限"
+echo "========================================="
+echo ""
+bash "$SCRIPT_DIR/setup-sudo.sh"
+
+# 步骤5: 配置systemd服务
+echo ""
+echo "========================================="
+echo "步骤 5/5: 配置systemd服务"
 echo "========================================="
 echo ""
 bash "$SCRIPT_DIR/setup-systemd.sh"

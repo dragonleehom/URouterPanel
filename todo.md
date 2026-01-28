@@ -1414,3 +1414,17 @@
 - [x] 添加tRPC API检测无线硬件支持
 - [x] 更新前端WirelessManagement页面显示硬件检测结果
 - [x] 如果不支持无线,显示友好提示信息
+
+
+## WiFi启动权限问题修复
+
+### 问题分析
+- [x] 分析WiFi管理涉及的所有操作(hostapd, iw, ip link等)
+- [x] 确定哪些操作需要root权限
+- [x] 评估两种方案:以root运行服务 vs 使用sudo执行特定命令(采用sudo方案)
+
+### 解决方案实施
+- [x] 修改无线服务代码支持sudo执行
+- [x] 创建setup-sudo.sh脚本配置无密码sudo权限
+- [x] 更新install-all.sh添加sudo配置步骤
+- [x] 测试WiFi启动功能(待ARM设备测试)

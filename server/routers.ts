@@ -309,45 +309,43 @@ export const appRouter = router({
     getInterfaces: publicProcedure.query(async () => {
       return await wirelessService.getWirelessInterfaces();
     }),
-    getInterfaceInfo: publicProcedure
-      .input(z.object({ iface: z.string() }))
-      .query(async ({ input }) => {
-        return await pythonAPI.getWirelessInterfaceInfo(input.iface);
-      }),
-    scan: publicProcedure
-      .input(z.object({ iface: z.string() }))
-      .query(async ({ input }) => {
-        return await pythonAPI.scanWiFiNetworks(input.iface);
-      }),
     getConfig: publicProcedure.query(async () => {
-      return await pythonAPI.getWiFiConfig();
+      return await wirelessService.getWiFiConfig();
     }),
     configure: publicProcedure
-      .input(z.any())
+      .input(z.object({
+        ssid: z.string(),
+        password: z.string().optional(),
+        channel: z.number(),
+        interface: z.string(),
+        enabled: z.boolean(),
+        hidden: z.boolean().optional(),
+        country_code: z.string().optional(),
+      }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.configureWiFi(input);
+        return await wirelessService.configureWiFi(input);
       }),
     getClients: publicProcedure
       .input(z.object({ iface: z.string() }))
       .query(async ({ input }) => {
-        return await pythonAPI.getWiFiClients(input.iface);
+        return await wirelessService.getWiFiClients(input.iface);
       }),
     disconnectClient: publicProcedure
       .input(z.object({ iface: z.string(), mac: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.disconnectWiFiClient(input.iface, input.mac);
+        return await wirelessService.disconnectWiFiClient(input.iface, input.mac);
       }),
     getStatus: publicProcedure.query(async () => {
-      return await pythonAPI.getWirelessStatus();
+      return await wirelessService.getWiFiStatus();
     }),
     start: publicProcedure.mutation(async () => {
-      return await pythonAPI.startWiFi();
+      return await wirelessService.startWiFi();
     }),
     stop: publicProcedure.mutation(async () => {
-      return await pythonAPI.stopWiFi();
+      return await wirelessService.stopWiFi();
     }),
     restart: publicProcedure.mutation(async () => {
-      return await pythonAPI.restartWiFi();
+      return await wirelessService.restartWiFi();
     }),
   }),
 

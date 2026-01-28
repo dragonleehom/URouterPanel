@@ -118,7 +118,6 @@ export default function WirelessManagement() {
     ssid: "",
     password: "",
     channel: "auto",
-    encryption: "wpa2",
     hidden: false,
   });
 
@@ -129,7 +128,7 @@ export default function WirelessManagement() {
         ssid: config.ssid || "",
         password: config.password || "",
         channel: config.channel?.toString() || "auto",
-        encryption: config.encryption || "wpa2",
+        // encryption removed - determined by password presence
         hidden: config.hidden || false,
       });
       setConfigDialogOpen(true);
@@ -147,11 +146,15 @@ export default function WirelessManagement() {
       return;
     }
 
+    // 获取第一个无线接口
+    const wirelessInterface = capability?.devices[0]?.interface || 'wlan0';
+    
     configureWiFiMutation.mutate({
       ssid: formData.ssid,
-      password: formData.password,
-      channel: formData.channel === "auto" ? 0 : parseInt(formData.channel),
-      encryption: formData.encryption,
+      password: formData.password || undefined,
+      channel: formData.channel === "auto" ? 6 : parseInt(formData.channel),
+      interface: wirelessInterface,
+      enabled: true,
       hidden: formData.hidden,
     });
   };
@@ -306,12 +309,7 @@ export default function WirelessManagement() {
             </div>
           </div>
         </Card>
-        <Card className="p-4">
-          <div>
-            <p className="text-sm text-muted-foreground">接口数量</p>
-            <p className="text-2xl font-bold">{status?.interface_count || 0}</p>
-          </div>
-        </Card>
+
         <Card className="p-4">
           <div>
             <p className="text-sm text-muted-foreground">已连接客户端</p>
@@ -354,7 +352,7 @@ export default function WirelessManagement() {
                   </div>
                   <div>
                     <Label>加密方式</Label>
-                    <p className="text-sm mt-1">{config.encryption || "未配置"}</p>
+                         <p className="text-sm">{config.password ? "WPA2" : "开放网络"}</p>
                   </div>
                   <div>
                     <Label>信道</Label>
@@ -473,20 +471,10 @@ export default function WirelessManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="encryption">加密方式</Label>
-              <Select
-                value={formData.encryption}
-                onValueChange={(value) => setFormData({ ...formData, encryption: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="wpa2">WPA2</SelectItem>
-                  <SelectItem value="wpa3">WPA3</SelectItem>
-                  <SelectItem value="wpa2-wpa3">WPA2/WPA3混合</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>加密方式</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {formData.password ? "WPA2 (自动)" : "开放网络"}
+              </p>
             </div>
             <div>
               <Label htmlFor="channel">信道</Label>
