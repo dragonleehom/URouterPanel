@@ -1199,3 +1199,40 @@
   - [x] 添加空状态提示
 - [x] 测试验证
   - [x] TypeScript编译验证
+
+
+## 容器详细信息面板 ✅
+
+### 目标
+为容器创建详细信息面板,显示完整配置并实时监控CPU和内存使用情况
+
+### 后端开发
+- [x] 在dockerService添加getContainerStats函数
+  - [ ] 调用Docker stats API获取容器资源使用数据
+  - [ ] 解析CPU使用率、内存使用量、网络I/O、磁盘I/O
+  - [ ] 返回格式化的监控数据
+- [x] 在dockerService添加getContainerDetails函数
+  - [ ] 调用Docker inspect API获取容器完整配置
+  - [ ] 解析环境变量、卷挂载、端口映射、网络设置
+  - [ ] 返回结构化的配置数据
+- [x] 在containerRouter添加tRPC API
+  - [ ] getContainerStats: 获取容器实时资源使用
+  - [ ] getContainerDetails: 获取容器详细配置
+
+### 前端开发
+- [x] 创建ContainerDetailsDialog组件
+  - [ ] 使用Tabs组件分为"配置"和"监控"两个标签页
+  - [ ] 配置标签页显示环境变量、卷、端口、网络
+  - [ ] 监控标签页显示CPU/内存使用图表
+- [x] 集成Recharts绘制资源使用趋势图
+  - [ ] 使用Recharts绘制CPU使用率曲线
+  - [ ] 使用Recharts绘制内存使用量曲线
+  - [ ] 显示当前值和峰值
+  - [ ] 每3秒自动刷新数据
+- [x] 集成到ContainerManagement页面
+  - [ ] 在容器列表添加"详情"按钮
+  - [ ] 打开ContainerDetailsDialog对话框
+  - [ ] 实现数据加载和刷新逻辑
+
+### 测试验证
+- [x] TypeScript编译验证

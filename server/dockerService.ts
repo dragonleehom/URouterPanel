@@ -219,14 +219,43 @@ export async function getContainerStats(containerId: string) {
     const memoryLimit = stats.memory_stats.limit;
     const memoryPercent = (memoryUsage / memoryLimit) * 100;
 
+    // 网络 I/O
+    const networks = stats.networks || {};
+    let networkRx = 0;
+    let networkTx = 0;
+    Object.values(networks).forEach((net: any) => {
+      networkRx += net.rx_bytes || 0;
+      networkTx += net.tx_bytes || 0;
+    });
+
+    // 磁盘 I/O
+    const blockIO = stats.blkio_stats?.io_service_bytes_recursive || [];
+    let diskRead = 0;
+    let diskWrite = 0;
+    blockIO.forEach((io: any) => {
+      if (io.op === 'Read') diskRead += io.value;
+      if (io.op === 'Write') diskWrite += io.value;
+    });
+
     return {
-      cpu: cpuPercent.toFixed(2),
-      memory: {
-        usage: (memoryUsage / 1024 / 1024).toFixed(2), // MB
-        limit: (memoryLimit / 1024 / 1024).toFixed(2), // MB
-        percent: memoryPercent.toFixed(2),
+      cpu: {
+        percent: parseFloat(cpuPercent.toFixed(2)),
+        cores: stats.cpu_stats.online_cpus,
       },
-      network: stats.networks,
+      memory: {
+        usage: memoryUsage,
+        limit: memoryLimit,
+        percent: parseFloat(memoryPercent.toFixed(2)),
+      },
+      network: {
+        rx: networkRx,
+        tx: networkTx,
+      },
+      disk: {
+        read: diskRead,
+        write: diskWrite,
+      },
+      timestamp: new Date().toISOString(),
     };
   } catch (error: any) {
     console.error(`Failed to get stats for container ${containerId}:`, error);
@@ -693,5 +722,68 @@ export async function getComposeProjectConfig(
   } catch (error: any) {
     console.error("Failed to read compose config:", error);
     throw new Error(`Failed to read compose config: ${error.message}`);
+  }
+}
+
+
+/**
+ * 获取容器详细配置
+ */
+export async function getContainerDetails(containerId: string) {
+  try {
+    const container = docker.getContainer(containerId);
+    const inspect = await container.inspect();
+    
+    return {
+      id: inspect.Id,
+      name: inspect.Name.replace("/", ""),
+      image: inspect.Config.Image,
+      state: {
+        status: inspect.State.Status,
+        running: inspect.State.Running,
+        paused: inspect.State.Paused,
+        restarting: inspect.State.Restarting,
+        startedAt: inspect.State.StartedAt,
+        finishedAt: inspect.State.FinishedAt,
+      },
+      config: {
+        hostname: inspect.Config.Hostname,
+        domainname: inspect.Config.Domainname,
+        user: inspect.Config.User,
+        env: inspect.Config.Env || [],
+        cmd: inspect.Config.Cmd || [],
+        workingDir: inspect.Config.WorkingDir,
+        entrypoint: inspect.Config.Entrypoint || [],
+        labels: inspect.Config.Labels || {},
+      },
+      network: {
+        ipAddress: (inspect.NetworkSettings as any).IPAddress || '',
+        macAddress: (inspect.NetworkSettings as any).MacAddress || '',
+        ports: inspect.NetworkSettings.Ports || {},
+        networks: Object.entries(inspect.NetworkSettings.Networks || {}).map(([name, net]: [string, any]) => ({
+          name,
+          ipAddress: net.IPAddress,
+          gateway: net.Gateway,
+          macAddress: net.MacAddress,
+        })),
+      },
+      mounts: (inspect.Mounts || []).map((mount: any) => ({
+        type: mount.Type,
+        source: mount.Source,
+        destination: mount.Destination,
+        mode: mount.Mode,
+        rw: mount.RW,
+      })),
+      hostConfig: {
+        cpuShares: inspect.HostConfig.CpuShares,
+        memory: inspect.HostConfig.Memory,
+        memorySwap: inspect.HostConfig.MemorySwap,
+        restartPolicy: inspect.HostConfig.RestartPolicy,
+        privileged: inspect.HostConfig.Privileged,
+      },
+    };
+  } catch (error: any) {
+    console.error(`Failed to get container details:`, error);
+    throw new Error(`Failed to get container details: ${error.message}`);
   }
 }

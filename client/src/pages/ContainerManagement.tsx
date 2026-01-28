@@ -43,11 +43,17 @@ import {
 import { EditNetworkDialog } from "@/components/container/EditNetworkDialog";
 import { ContainerLogsDialog } from "@/components/container/ContainerLogsDialog";
 import { ComposeProjectDialog } from "@/components/container/ComposeProjectDialog";
+import { ContainerDetailsDialog } from "@/components/container/ContainerDetailsDialog";
 
 export default function ContainerManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [pullDialogOpen, setPullDialogOpen] = useState(false);
   const [editNetworkDialogOpen, setEditNetworkDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [selectedContainerForDetails, setSelectedContainerForDetails] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [composeDialogOpen, setComposeDialogOpen] = useState(false);
   const [composeConfigDialogOpen, setComposeConfigDialogOpen] = useState(false);
@@ -662,6 +668,17 @@ export default function ContainerManagement() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
+                            setSelectedContainerForDetails({ id: container.id, name: container.name });
+                            setDetailsDialogOpen(true);
+                          }}
+                          title="查看详情"
+                        >
+                          <AlertCircle className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
                             setSelectedContainer({ id: container.id, name: container.name });
                             setLogsDialogOpen(true);
                           }}
@@ -904,6 +921,16 @@ export default function ContainerManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 容器详情对话框 */}
+      {selectedContainerForDetails && (
+        <ContainerDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          containerId={selectedContainerForDetails.id}
+          containerName={selectedContainerForDetails.name}
+        />
+      )}
     </div>
   );
 }

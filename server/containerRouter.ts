@@ -399,4 +399,25 @@ export const containerRouter = router({
         });
       }
     }),
+
+  /**
+   * 获取容器详细配置
+   */
+  getContainerDetails: publicProcedure
+    .input(
+      z.object({
+        containerId: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const details = await dockerService.getContainerDetails(input.containerId);
+        return details;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
 });
