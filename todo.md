@@ -1016,3 +1016,26 @@
 - [x] 路由和菜单集成
   - [x] 在App.tsx中注册/virtual-networks路由
   - [x] 在DashboardLayout侧边栏添加菜单项
+
+
+## 虚拟网络集成到容器和虚拟机创建流程 ✅
+
+### 目标
+在容器和虚拟机创建对话框中集成虚拟网络选择功能,实现统一的网络配置体验
+
+### 容器创建集成
+- [x] 在ContainerManagement.tsx创建对话框添加网络配置区域
+- [x] 添加虚拟网络选择器(下拉列表)
+- [x] 显示选中网络的详细信息(子网/网关/类型)
+- [x] 支持IP地址自动分配或手动指定
+- [x] 调用virtualNetwork.attachContainer API连接容器到网络
+
+### 虚拟机创建集成
+- [x] 在VMManagement.tsx创建对话框的网络配置中添加虚拟网络选项
+- [x] 添加虚拟网络选择器
+- [x] 显示选中网络的详细信息
+- [x] 调用virtualNetwork.attachVM API连接虚拟机到网络
+- [x] 实现attachVM和detachVM API
+
+### 测试验证
+- [x] TypeScript编译验证通过

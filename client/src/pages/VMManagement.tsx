@@ -33,7 +33,15 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  Network,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { HardwareDetectionPanel } from "@/components/vm/HardwareDetectionPanel";
 import { OptimizationRecommendations } from "@/components/vm/OptimizationRecommendations";
 import { AdvancedOptions, type AdvancedVMConfig } from "@/components/vm/AdvancedOptions";
@@ -45,6 +53,8 @@ export default function VMManagement() {
     memory: 2048,
     cpus: 2,
     diskSize: 20,
+    virtualNetworkId: null as number | null,
+    ipAddress: "",
   });
   const [advancedConfig, setAdvancedConfig] = useState<AdvancedVMConfig>({});
 
@@ -54,14 +64,41 @@ export default function VMManagement() {
   // 检查KVM支持
   const { data: kvmStatus } = trpc.vm.checkKVM.useQuery();
 
-  // 创建虚拟机
-  const createMutation = trpc.vm.create.useMutation({
+  // 获取虚拟网络列表
+  const { data: virtualNetworks } = trpc.virtualNetwork.list.useQuery();
+
+  // 连接虚拟机到虚拟网络
+  const attachNetworkMutation = trpc.virtualNetwork.attachVM.useMutation({
     onSuccess: () => {
-      alert("虚拟机创建成功!");
+      alert("虚拟机创建成功并已连接到虚拟网络!");
       setCreateDialogOpen(false);
-      setNewVM({ name: "", memory: 2048, cpus: 2, diskSize: 20 });
+      setNewVM({ name: "", memory: 2048, cpus: 2, diskSize: 20, virtualNetworkId: null, ipAddress: "" });
       setAdvancedConfig({});
       refetch();
+    },
+    onError: (error) => {
+      alert(`网络连接失败: ${error.message}`);
+      refetch();
+    },
+  });
+
+  // 创建虚拟机
+  const createMutation = trpc.vm.create.useMutation({
+    onSuccess: (data) => {
+      // 如果选择了虚拟网络,连接虚拟机到网络
+      if (newVM.virtualNetworkId) {
+        attachNetworkMutation.mutate({
+          networkId: newVM.virtualNetworkId,
+          vmName: newVM.name,
+          ipAddress: newVM.ipAddress || undefined,
+        });
+      } else {
+        alert("虚拟机创建成功!");
+        setCreateDialogOpen(false);
+        setNewVM({ name: "", memory: 2048, cpus: 2, diskSize: 20, virtualNetworkId: null, ipAddress: "" });
+        setAdvancedConfig({});
+        refetch();
+      }
     },
     onError: (error) => {
       alert(`创建失败: ${error.message}`);
@@ -215,6 +252,80 @@ export default function VMManagement() {
                     value={newVM.diskSize}
                     onChange={(e) => setNewVM({ ...newVM, diskSize: parseInt(e.target.value) })}
                   />
+                </div>
+
+                {/* 虚拟网络配置 */}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Network className="w-4 h-4 text-gray-500" />
+                    <Label className="text-sm font-semibold">网络配置</Label>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="vm-network">虚拟网络</Label>
+                      <Select
+                        value={newVM.virtualNetworkId?.toString() || "default"}
+                        onValueChange={(value) =>
+                          setNewVM({
+                            ...newVM,
+                            virtualNetworkId: value === "default" ? null : parseInt(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger id="vm-network">
+                          <SelectValue placeholder="选择网络" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">NAT默认网络</SelectItem>
+                          {virtualNetworks?.map((network: any) => (
+                            <SelectItem key={network.id} value={network.id.toString()}>
+                              {network.name} ({network.subnet})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        选择虚拟机连接的虚拟网络
+                      </p>
+                    </div>
+
+                    {newVM.virtualNetworkId && (
+                      <div>
+                        <Label htmlFor="vm-ip">IP地址 (可选)</Label>
+                        <Input
+                          id="vm-ip"
+                          placeholder="留空自动分配"
+                          value={newVM.ipAddress}
+                          onChange={(e) => setNewVM({ ...newVM, ipAddress: e.target.value })}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          指定静态IP地址,留空则自动分配
+                        </p>
+                      </div>
+                    )}
+
+                    {newVM.virtualNetworkId && virtualNetworks && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs">
+                        <p className="font-semibold text-blue-900 mb-1">网络信息</p>
+                        {(() => {
+                          const selectedNetwork = virtualNetworks.find(
+                            (n: any) => n.id === newVM.virtualNetworkId
+                          );
+                          if (!selectedNetwork) return null;
+                          return (
+                            <div className="text-blue-800 space-y-0.5">
+                              <p>子网: {selectedNetwork.subnet}</p>
+                              <p>网关: {selectedNetwork.gateway}</p>
+                              <p>类型: {selectedNetwork.type}</p>
+                              {selectedNetwork.bridgeName && (
+                                <p>Bridge: {selectedNetwork.bridgeName}</p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 

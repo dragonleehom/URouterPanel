@@ -30,7 +30,15 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  Network,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ContainerManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -40,6 +48,8 @@ export default function ContainerManagement() {
     image: "",
     env: "",
     ports: "",
+    virtualNetworkId: null as number | null,
+    ipAddress: "",
   });
   const [imageName, setImageName] = useState("");
 
@@ -60,13 +70,39 @@ export default function ContainerManagement() {
     refetch: refetchImages,
   } = trpc.container.listImages.useQuery();
 
+  // 获取虚拟网络列表
+  const { data: virtualNetworks } = trpc.virtualNetwork.list.useQuery();
+
+  // 连接容器到虚拟网络
+  const attachNetworkMutation = trpc.virtualNetwork.attachContainer.useMutation({
+    onSuccess: () => {
+      alert("容器创建成功并已连接到虚拟网络");
+      setCreateDialogOpen(false);
+      setNewContainer({ name: "", image: "", env: "", ports: "", virtualNetworkId: null, ipAddress: "" });
+      refetchContainers();
+    },
+    onError: (error) => {
+      alert(`网络连接失败: ${error.message}`);
+      refetchContainers();
+    },
+  });
+
   // 创建容器
   const createMutation = trpc.container.createContainer.useMutation({
-    onSuccess: () => {
-      alert("容器创建成功");
-      setCreateDialogOpen(false);
-      setNewContainer({ name: "", image: "", env: "", ports: "" });
-      refetchContainers();
+    onSuccess: (data) => {
+      // 如果选择了虚拟网络,连接容器到网络
+      if (newContainer.virtualNetworkId) {
+        attachNetworkMutation.mutate({
+          networkId: newContainer.virtualNetworkId,
+          containerId: data.id,
+          ipAddress: newContainer.ipAddress || undefined,
+        });
+      } else {
+        alert("容器创建成功");
+        setCreateDialogOpen(false);
+        setNewContainer({ name: "", image: "", env: "", ports: "", virtualNetworkId: null, ipAddress: "" });
+        refetchContainers();
+      }
     },
     onError: (error) => {
       alert(`创建失败: ${error.message}`);
@@ -325,6 +361,82 @@ export default function ContainerManagement() {
                   <p className="text-xs text-gray-500 mt-1">
                     格式: KEY=value,多个用逗号分隔
                   </p>
+                </div>
+
+                {/* 虚拟网络配置 */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Network className="w-4 h-4 text-gray-500" />
+                    <Label className="text-sm font-semibold">网络配置</Label>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="virtualNetwork">虚拟网络</Label>
+                      <Select
+                        value={newContainer.virtualNetworkId?.toString() || "default"}
+                        onValueChange={(value) =>
+                          setNewContainer({
+                            ...newContainer,
+                            virtualNetworkId: value === "default" ? null : parseInt(value),
+                          })
+                        }
+                      >
+                        <SelectTrigger id="virtualNetwork">
+                          <SelectValue placeholder="选择网络" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Docker默认网络</SelectItem>
+                          {virtualNetworks?.map((network: any) => (
+                            <SelectItem key={network.id} value={network.id.toString()}>
+                              {network.name} ({network.subnet})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        选择容器连接的虚拟网络
+                      </p>
+                    </div>
+
+                    {newContainer.virtualNetworkId && (
+                      <div>
+                        <Label htmlFor="ipAddress">IP地址 (可选)</Label>
+                        <Input
+                          id="ipAddress"
+                          placeholder="留空自动分配"
+                          value={newContainer.ipAddress}
+                          onChange={(e) =>
+                            setNewContainer({ ...newContainer, ipAddress: e.target.value })
+                          }
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          指定静态IP地址,留空则自动分配
+                        </p>
+                      </div>
+                    )}
+
+                    {newContainer.virtualNetworkId && virtualNetworks && (
+                      <div className="bg-blue-50 border border-blue-200 rounded p-3 text-xs">
+                        <p className="font-semibold text-blue-900 mb-1">网络信息</p>
+                        {(() => {
+                          const selectedNetwork = virtualNetworks.find(
+                            (n: any) => n.id === newContainer.virtualNetworkId
+                          );
+                          if (!selectedNetwork) return null;
+                          return (
+                            <div className="text-blue-800 space-y-0.5">
+                              <p>子网: {selectedNetwork.subnet}</p>
+                              <p>网关: {selectedNetwork.gateway}</p>
+                              <p>类型: {selectedNetwork.type}</p>
+                              {selectedNetwork.bridgeName && (
+                                <p>Bridge: {selectedNetwork.bridgeName}</p>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <DialogFooter>

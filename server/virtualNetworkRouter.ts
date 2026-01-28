@@ -332,6 +332,72 @@ export const virtualNetworkRouter = router({
     }),
 
   /**
+   * 将虚拟机连接到虚拟网络
+   */
+  attachVM: protectedProcedure
+    .input(
+      z.object({
+        networkId: z.number(),
+        vmName: z.string(),
+        ipAddress: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const [network] = await db.select().from(virtualNetworks).where(eq(virtualNetworks.id, input.networkId));
+
+      if (!network || !network.bridgeName) {
+        throw new Error("Network not found");
+      }
+
+      try {
+        // 记录到数据库
+        await db.insert(networkInterfaces).values({
+          networkId: input.networkId,
+          resourceType: "vm",
+          resourceId: input.vmName,
+          ipAddress: input.ipAddress,
+        });
+
+        return { success: true, message: "VM attached to network", bridgeName: network.bridgeName };
+      } catch (error: any) {
+        throw new Error(`Failed to attach VM: ${error.message}`);
+      }
+    }),
+
+  /**
+   * 从虚拟网络分离VM
+   */
+  detachVM: protectedProcedure
+    .input(
+      z.object({
+        networkId: z.number(),
+        vmName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      try {
+        // 从数据库删除记录
+        await db
+          .delete(networkInterfaces)
+          .where(
+            and(
+              eq(networkInterfaces.networkId, input.networkId),
+              eq(networkInterfaces.resourceId, input.vmName)
+            )
+          );
+
+        return { success: true, message: "VM detached from network" };
+      } catch (error: any) {
+        throw new Error(`Failed to detach VM: ${error.message}`);
+      }
+    }),
+
+  /**
    * 获取网络的已连接资源
    */
   getConnectedResources: protectedProcedure
