@@ -1462,3 +1462,32 @@
 
 ### 测试
 - [ ] 验证所有功能在root权限下正常工作(待ARM设备测试)
+
+
+## 高优先级功能真实后端实现
+
+### 1. 虚拟网络管理
+- [ ] 分析当前networkRouter.ts的实现(Docker网络)
+- [ ] 创建virtualNetworkService管理Docker网络
+- [ ] 创建bridgeService管理Linux网桥
+- [ ] 实现网络创建、删除、配置功能
+- [ ] 实现网络列表查询和状态监控
+- [ ] 移除前端页面的模拟数据
+
+### 2. 防火墙规则管理
+- [x] 分析当前FirewallManagement.tsx的实现
+- [x] 创建firewallService管理iptables规则
+- [x] 实现规则增删改查功能
+- [x] 实现规则链管理(INPUT/OUTPUT/FORWARD)
+- [x] 实现NAT规则管理(SNAT/DNAT/MASQUERADE)
+- [x] 实现端口转发功能
+- [ ] 移除前端页面的模拟数据(待前端更新)
+
+### 3. MAC地址管理
+- [ ] 分析当前MACManagement.tsx的实现
+- [ ] 创建macService管理MAC地址
+- [ ] 实现ARP表查询功能
+- [ ] 实现MAC地址过滤(黑白名单)
+- [ ] 实现静态ARP绑定
+- [ ] 实现MAC地址克隆功能
+- [ ] 移除前端页面的模拟数据

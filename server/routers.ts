@@ -7,6 +7,7 @@ import { containerMonitorRouter } from "./containerMonitorRouter";
 import { networkRouter } from "./networkRouter";
 import { virtualNetworkRouter } from "./virtualNetworkRouter";
 import { vmRouter } from "./vmRouter";
+import { firewallRouter } from "./firewallRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -146,66 +147,7 @@ export const appRouter = router({
   }),
 
   // ==================== 防火墙管理路由 ====================
-  firewall: router({
-    getRules: publicProcedure
-      .query(async () => {
-        return await pythonAPI.getFirewallRules();
-      }),
-    getRule: publicProcedure
-      .input(z.object({ ruleId: z.string() }))
-      .query(async ({ input }) => {
-        return await pythonAPI.getFirewallRule(input.ruleId);
-      }),
-    addRule: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.addFirewallRule(input);
-      }),
-    updateRule: publicProcedure
-      .input(z.object({ ruleId: z.string(), rule: z.any() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.updateFirewallRule(input.ruleId, input.rule);
-      }),
-    deleteRule: publicProcedure
-      .input(z.object({ ruleId: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.deleteFirewallRule(input.ruleId);
-      }),
-    enableRule: publicProcedure
-      .input(z.object({ ruleId: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.enableFirewallRule(input.ruleId);
-      }),
-    disableRule: publicProcedure
-      .input(z.object({ ruleId: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.disableFirewallRule(input.ruleId);
-      }),
-    getTemplates: publicProcedure
-      .query(async () => {
-        return await pythonAPI.getFirewallTemplates();
-      }),
-    getStatus: publicProcedure
-      .query(async () => {
-        return await pythonAPI.getFirewallStatus();
-      }),
-    addMasquerade: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.addMasqueradeRule(input);
-      }),
-    addPortForward: publicProcedure
-      .input(z.any())
-      .mutation(async ({ input }) => {
-        return await pythonAPI.addPortForwardRule(input);
-      }),
-    enableIPForward: publicProcedure.mutation(async () => {
-      return await pythonAPI.enableIPForward();
-    }),
-    disableIPForward: publicProcedure.mutation(async () => {
-      return await pythonAPI.disableIPForward();
-    }),
-  }),
+  firewall: firewallRouter,
 
   // ==================== 路由管理路由 ====================
   routes: router({
