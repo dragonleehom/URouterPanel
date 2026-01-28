@@ -120,11 +120,18 @@ class PythonAPIClient {
   // ==================== 防火墙管理 API ====================
 
   /**
-   * 获取防火墙规则
+   * 获取防火墙规则列表
    */
-  async getFirewallRules(chain?: string) {
-    const params = chain ? { chain } : {};
-    const response = await this.client.get('/api/network/firewall/rules', { params });
+  async getFirewallRules() {
+    const response = await this.client.get('/api/firewall/rules');
+    return response.data;
+  }
+
+  /**
+   * 获取指定防火墙规则
+   */
+  async getFirewallRule(ruleId: string) {
+    const response = await this.client.get(`/api/firewall/rules/${ruleId}`);
     return response.data;
   }
 
@@ -132,16 +139,55 @@ class PythonAPIClient {
    * 添加防火墙规则
    */
   async addFirewallRule(rule: any) {
-    const response = await this.client.post('/api/network/firewall/rules', rule);
+    const response = await this.client.post('/api/firewall/rules', rule);
+    return response.data;
+  }
+
+  /**
+   * 更新防火墙规则
+   */
+  async updateFirewallRule(ruleId: string, rule: any) {
+    const response = await this.client.put(`/api/firewall/rules/${ruleId}`, rule);
     return response.data;
   }
 
   /**
    * 删除防火墙规则
    */
-  async deleteFirewallRule(chain?: string) {
-    const params = chain ? { chain } : {};
-    const response = await this.client.delete('/api/network/firewall/rules', { params });
+  async deleteFirewallRule(ruleId: string) {
+    const response = await this.client.delete(`/api/firewall/rules/${ruleId}`);
+    return response.data;
+  }
+
+  /**
+   * 启用防火墙规则
+   */
+  async enableFirewallRule(ruleId: string) {
+    const response = await this.client.post(`/api/firewall/rules/${ruleId}/enable`);
+    return response.data;
+  }
+
+  /**
+   * 禁用防火墙规则
+   */
+  async disableFirewallRule(ruleId: string) {
+    const response = await this.client.post(`/api/firewall/rules/${ruleId}/disable`);
+    return response.data;
+  }
+
+  /**
+   * 获取防火墙规则模板
+   */
+  async getFirewallTemplates() {
+    const response = await this.client.get('/api/firewall/templates');
+    return response.data;
+  }
+
+  /**
+   * 获取防火墙状态
+   */
+  async getFirewallStatus() {
+    const response = await this.client.get('/api/firewall/status');
     return response.data;
   }
 

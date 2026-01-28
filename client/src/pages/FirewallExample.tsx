@@ -62,7 +62,7 @@ export default function FirewallExample() {
     error,
     refetch,
   } = trpc.firewall.getRules.useQuery(
-    { chain: selectedChain },
+    undefined,
     {
       refetchInterval: 5000, // 每5秒自动刷新
     }
@@ -118,14 +118,25 @@ export default function FirewallExample() {
     },
   });
 
-  // 切换规则状态mutation
-  const toggleRuleMutation = trpc.firewall.toggleRule.useMutation({
+  // 启用规则mutation
+  const enableRuleMutation = trpc.firewall.enableRule.useMutation({
     onSuccess: () => {
-      toast.success("规则状态已更新");
+      toast.success("规则已启用");
       refetch();
     },
-    onError: (error) => {
-      handleApiError(error, "切换规则状态");
+    onError: (error: any) => {
+      handleApiError(error, "启用规则");
+    },
+  });
+
+  // 禁用规则mutation
+  const disableRuleMutation = trpc.firewall.disableRule.useMutation({
+    onSuccess: () => {
+      toast.success("规则已禁用");
+      refetch();
+    },
+    onError: (error: any) => {
+      handleApiError(error, "禁用规则");
     },
   });
 
@@ -175,7 +186,11 @@ export default function FirewallExample() {
   };
 
   const handleToggleRule = (ruleId: string, enabled: boolean) => {
-    toggleRuleMutation.mutate({ ruleId, enabled: !enabled });
+    if (enabled) {
+      disableRuleMutation.mutate({ ruleId });
+    } else {
+      enableRuleMutation.mutate({ ruleId });
+    }
   };
 
   const handleEditRule = (rule: FirewallRule) => {
@@ -279,7 +294,7 @@ export default function FirewallExample() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleToggleRule(rule.id, rule.enabled)}
-                      disabled={toggleRuleMutation.isPending}
+                      disabled={enableRuleMutation.isPending || disableRuleMutation.isPending}
                     >
                       {rule.enabled ? (
                         <XCircle className="h-4 w-4" />

@@ -87,9 +87,13 @@ export const appRouter = router({
   // ==================== 防火墙管理路由 ====================
   firewall: router({
     getRules: publicProcedure
-      .input(z.object({ chain: z.string().optional() }))
+      .query(async () => {
+        return await pythonAPI.getFirewallRules();
+      }),
+    getRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
       .query(async ({ input }) => {
-        return await pythonAPI.getFirewallRules(input.chain);
+        return await pythonAPI.getFirewallRule(input.ruleId);
       }),
     addRule: publicProcedure
       .input(z.any())
@@ -99,20 +103,30 @@ export const appRouter = router({
     updateRule: publicProcedure
       .input(z.object({ ruleId: z.string(), rule: z.any() }))
       .mutation(async ({ input }) => {
-        // 先删除旧规则再添加新规则
-        await pythonAPI.deleteFirewallRule(input.ruleId);
-        return await pythonAPI.addFirewallRule(input.rule);
+        return await pythonAPI.updateFirewallRule(input.ruleId, input.rule);
       }),
     deleteRule: publicProcedure
       .input(z.object({ ruleId: z.string() }))
       .mutation(async ({ input }) => {
         return await pythonAPI.deleteFirewallRule(input.ruleId);
       }),
-    toggleRule: publicProcedure
-      .input(z.object({ ruleId: z.string(), enabled: z.boolean() }))
+    enableRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
       .mutation(async ({ input }) => {
-        // 防火墙规则的启用/禁用需要通过删除和重新添加实现
-        return { success: true, message: 'Rule toggled' };
+        return await pythonAPI.enableFirewallRule(input.ruleId);
+      }),
+    disableRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.disableFirewallRule(input.ruleId);
+      }),
+    getTemplates: publicProcedure
+      .query(async () => {
+        return await pythonAPI.getFirewallTemplates();
+      }),
+    getStatus: publicProcedure
+      .query(async () => {
+        return await pythonAPI.getFirewallStatus();
       }),
     addMasquerade: publicProcedure
       .input(z.any())
