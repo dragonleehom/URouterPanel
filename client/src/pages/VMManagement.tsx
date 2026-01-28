@@ -1,0 +1,326 @@
+/**
+ * 虚拟机管理页面
+ * 基于QEMU实现虚拟机创建、启动、停止等功能
+ */
+
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Server,
+  Play,
+  Square,
+  Trash2,
+  Plus,
+  Monitor,
+  Cpu,
+  HardDrive,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
+
+export default function VMManagement() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [newVM, setNewVM] = useState({
+    name: "",
+    memory: 2048,
+    cpus: 2,
+    diskSize: 20,
+  });
+
+  // 获取虚拟机列表
+  const { data: vms, isLoading, refetch } = trpc.vm.list.useQuery();
+
+  // 检查KVM支持
+  const { data: kvmStatus } = trpc.vm.checkKVM.useQuery();
+
+  // 创建虚拟机
+  const createMutation = trpc.vm.create.useMutation({
+    onSuccess: () => {
+      alert("虚拟机创建成功!");
+      setCreateDialogOpen(false);
+      setNewVM({ name: "", memory: 2048, cpus: 2, diskSize: 20 });
+      refetch();
+    },
+    onError: (error) => {
+      alert(`创建失败: ${error.message}`);
+    },
+  });
+
+  // 启动虚拟机
+  const startMutation = trpc.vm.start.useMutation({
+    onSuccess: (data) => {
+      alert(`虚拟机已启动!\nVNC地址: ${data.vncUrl}`);
+      refetch();
+    },
+    onError: (error) => {
+      alert(`启动失败: ${error.message}`);
+    },
+  });
+
+  // 停止虚拟机
+  const stopMutation = trpc.vm.stop.useMutation({
+    onSuccess: () => {
+      alert("虚拟机已停止");
+      refetch();
+    },
+    onError: (error) => {
+      alert(`停止失败: ${error.message}`);
+    },
+  });
+
+  // 删除虚拟机
+  const deleteMutation = trpc.vm.delete.useMutation({
+    onSuccess: () => {
+      alert("虚拟机已删除");
+      refetch();
+    },
+    onError: (error) => {
+      alert(`删除失败: ${error.message}`);
+    },
+  });
+
+  const handleCreate = () => {
+    if (!newVM.name) {
+      alert("请输入虚拟机名称");
+      return;
+    }
+    createMutation.mutate(newVM);
+  };
+
+  const handleStart = (name: string) => {
+    startMutation.mutate({ name });
+  };
+
+  const handleStop = (name: string) => {
+    if (confirm(`确定要停止虚拟机 ${name} 吗?`)) {
+      stopMutation.mutate({ name });
+    }
+  };
+
+  const handleDelete = (name: string) => {
+    if (confirm(`确定要删除虚拟机 ${name} 吗? 此操作不可恢复!`)) {
+      deleteMutation.mutate({ name });
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* 页面标题 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">虚拟机管理</h1>
+          <p className="text-gray-500 mt-1">基于QEMU的虚拟机管理系统</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="w-4 h-4 mr-2" />
+              创建虚拟机
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>创建新虚拟机</DialogTitle>
+              <DialogDescription>
+                配置虚拟机参数并创建虚拟磁盘
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="vm-name">虚拟机名称</Label>
+                <Input
+                  id="vm-name"
+                  placeholder="例如: ubuntu-server"
+                  value={newVM.name}
+                  onChange={(e) => setNewVM({ ...newVM, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vm-memory">内存 (MB)</Label>
+                <Input
+                  id="vm-memory"
+                  type="number"
+                  min="512"
+                  max="32768"
+                  value={newVM.memory}
+                  onChange={(e) => setNewVM({ ...newVM, memory: parseInt(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vm-cpus">CPU核心数</Label>
+                <Input
+                  id="vm-cpus"
+                  type="number"
+                  min="1"
+                  max="16"
+                  value={newVM.cpus}
+                  onChange={(e) => setNewVM({ ...newVM, cpus: parseInt(e.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vm-disk">磁盘大小 (GB)</Label>
+                <Input
+                  id="vm-disk"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={newVM.diskSize}
+                  onChange={(e) => setNewVM({ ...newVM, diskSize: parseInt(e.target.value) })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                取消
+              </Button>
+              <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                {createMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                创建
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* KVM状态卡片 */}
+      {kvmStatus && (
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              {kvmStatus.supported ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              ) : (
+                <XCircle className="w-5 h-5 text-yellow-600" />
+              )}
+              <div>
+                <p className="font-medium">{kvmStatus.message}</p>
+                {!kvmStatus.supported && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    性能会比KVM模式略低,但功能完整可用
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 虚拟机列表 */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-gray-900">虚拟机列表</h2>
+
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin text-gray-400" />
+              <p className="text-gray-500">加载中...</p>
+            </CardContent>
+          </Card>
+        ) : !vms || vms.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-gray-500">
+              <Server className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+              <p>暂无虚拟机</p>
+              <p className="text-sm mt-1">点击"创建虚拟机"按钮开始</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vms.map((vm: any) => (
+              <Card key={vm.name}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Server className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">{vm.name}</CardTitle>
+                        <Badge
+                          variant={vm.status === "running" ? "default" : "secondary"}
+                          className="mt-1"
+                        >
+                          {vm.status === "running" ? "运行中" : "已停止"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Cpu className="w-4 h-4" />
+                      <span>CPU: {vm.cpus || "N/A"} 核心</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Monitor className="w-4 h-4" />
+                      <span>内存: {vm.memory || "N/A"} MB</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <HardDrive className="w-4 h-4" />
+                      <span>磁盘: {vm.diskPath.split("/").pop()}</span>
+                    </div>
+                    {vm.vncPort && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Monitor className="w-4 h-4" />
+                        <span>VNC: localhost:{vm.vncPort}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    {vm.status === "stopped" ? (
+                      <Button
+                        size="sm"
+                        onClick={() => handleStart(vm.name)}
+                        disabled={startMutation.isPending}
+                        className="flex-1"
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        启动
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStop(vm.name)}
+                        disabled={stopMutation.isPending}
+                        className="flex-1"
+                      >
+                        <Square className="w-4 h-4 mr-1" />
+                        停止
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(vm.name)}
+                      disabled={deleteMutation.isPending || vm.status === "running"}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

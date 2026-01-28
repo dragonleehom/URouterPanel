@@ -31,6 +31,7 @@ import RoutingManagement from "./pages/RoutingManagement";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import AppStore from "./pages/AppStore";
 import DockerNetworkManagement from "./pages/DockerNetworkManagement";
+import VMManagement from "./pages/VMManagement";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -61,13 +62,8 @@ function Router() {
         <Route path="/mac" component={MACManagement} />
         <Route path="/wol" component={WOLManagement} />
         <Route path="/appstore" component={AppStore} />
-        <Route path="/docker-networks" component={DockerNetworkManagement} />
-        <Route path="/vms">
-          <PlaceholderPage
-            title="虚拟机管理"
-            description="管理KVM虚拟机、存储池和网络"
-          />
-        </Route>
+         <Route path="/docker-network" component={DockerNetworkManagement} />
+        <Route path="/vms" component={VMManagement} />
         <Route path="/hardware">
           <PlaceholderPage
             title="硬件监控"
