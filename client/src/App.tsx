@@ -66,7 +66,7 @@ function Router() {
         <Route path="/appstore" component={AppStore} />
          <Route path="/docker-network" component={DockerNetworkManagement} />
         <Route path="/vms" component={VMManagement} />
-         <Route path="/virtual-network" component={VirtualNetworkManagement} />
+         <Route path="/virtual-networks" component={VirtualNetworkManagement} />
         <Route path="/hardware-monitor" component={HardwareMonitor} />
         <Route path="/hardware">
           <PlaceholderPage
