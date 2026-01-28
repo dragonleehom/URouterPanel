@@ -401,39 +401,87 @@ class PythonAPIClient {
    * 获取无线接口列表
    */
   async getWirelessInterfaces() {
-    const response = await this.client.get('/api/network/wireless/interfaces');
+    const response = await this.client.get('/api/wireless/interfaces');
     return response.data;
   }
 
   /**
-   * 配置无线网络
+   * 获取接口详细信息
    */
-  async configureWireless(config: any) {
-    const response = await this.client.post('/api/network/wireless/configure', config);
+  async getWirelessInterfaceInfo(iface: string) {
+    const response = await this.client.get(`/api/wireless/interfaces/${iface}/info`);
     return response.data;
   }
 
   /**
-   * 启用无线网络
+   * 扫描附近WiFi网络
    */
-  async enableWireless(iface: string) {
-    const response = await this.client.post(`/api/network/wireless/${iface}/enable`);
+  async scanWiFiNetworks(iface: string) {
+    const response = await this.client.get(`/api/wireless/scan/${iface}`);
     return response.data;
   }
 
   /**
-   * 禁用无线网络
+   * 获取WiFi配置
    */
-  async disableWireless(iface: string) {
-    const response = await this.client.post(`/api/network/wireless/${iface}/disable`);
+  async getWiFiConfig() {
+    const response = await this.client.get('/api/wireless/config');
     return response.data;
   }
 
   /**
-   * 获取无线客户端列表
+   * 配置WiFi热点
    */
-  async getWirelessClients(iface: string) {
-    const response = await this.client.get(`/api/network/wireless/${iface}/clients`);
+  async configureWiFi(config: any) {
+    const response = await this.client.post('/api/wireless/config', config);
+    return response.data;
+  }
+
+  /**
+   * 获取WiFi客户端列表
+   */
+  async getWiFiClients(iface: string) {
+    const response = await this.client.get(`/api/wireless/clients/${iface}`);
+    return response.data;
+  }
+
+  /**
+   * 断开WiFi客户端
+   */
+  async disconnectWiFiClient(iface: string, mac: string) {
+    const response = await this.client.post(`/api/wireless/clients/${iface}/disconnect/${mac}`);
+    return response.data;
+  }
+
+  /**
+   * 获取无线网络状态
+   */
+  async getWirelessStatus() {
+    const response = await this.client.get('/api/wireless/status');
+    return response.data;
+  }
+
+  /**
+   * 启动WiFi热点
+   */
+  async startWiFi() {
+    const response = await this.client.post('/api/wireless/start');
+    return response.data;
+  }
+
+  /**
+   * 停止WiFi热点
+   */
+  async stopWiFi() {
+    const response = await this.client.post('/api/wireless/stop');
+    return response.data;
+  }
+
+  /**
+   * 重启WiFi热点
+   */
+  async restartWiFi() {
+    const response = await this.client.post('/api/wireless/restart');
     return response.data;
   }
 

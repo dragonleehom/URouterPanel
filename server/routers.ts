@@ -227,26 +227,46 @@ export const appRouter = router({
     getInterfaces: publicProcedure.query(async () => {
       return await pythonAPI.getWirelessInterfaces();
     }),
+    getInterfaceInfo: publicProcedure
+      .input(z.object({ iface: z.string() }))
+      .query(async ({ input }) => {
+        return await pythonAPI.getWirelessInterfaceInfo(input.iface);
+      }),
+    scan: publicProcedure
+      .input(z.object({ iface: z.string() }))
+      .query(async ({ input }) => {
+        return await pythonAPI.scanWiFiNetworks(input.iface);
+      }),
+    getConfig: publicProcedure.query(async () => {
+      return await pythonAPI.getWiFiConfig();
+    }),
     configure: publicProcedure
       .input(z.any())
       .mutation(async ({ input }) => {
-        return await pythonAPI.configureWireless(input);
-      }),
-    enable: publicProcedure
-      .input(z.object({ iface: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.enableWireless(input.iface);
-      }),
-    disable: publicProcedure
-      .input(z.object({ iface: z.string() }))
-      .mutation(async ({ input }) => {
-        return await pythonAPI.disableWireless(input.iface);
+        return await pythonAPI.configureWiFi(input);
       }),
     getClients: publicProcedure
       .input(z.object({ iface: z.string() }))
       .query(async ({ input }) => {
-        return await pythonAPI.getWirelessClients(input.iface);
+        return await pythonAPI.getWiFiClients(input.iface);
       }),
+    disconnectClient: publicProcedure
+      .input(z.object({ iface: z.string(), mac: z.string() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.disconnectWiFiClient(input.iface, input.mac);
+      }),
+    getStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getWirelessStatus();
+    }),
+    start: publicProcedure.mutation(async () => {
+      return await pythonAPI.startWiFi();
+    }),
+    stop: publicProcedure.mutation(async () => {
+      return await pythonAPI.stopWiFi();
+    }),
+    restart: publicProcedure.mutation(async () => {
+      return await pythonAPI.restartWiFi();
+    }),
   }),
 
   // ==================== QoS流控管理路由 ====================
