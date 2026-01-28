@@ -491,15 +491,63 @@ class PythonAPIClient {
    * 获取QoS配置
    */
   async getQoSConfig() {
-    const response = await this.client.get('/api/network/qos/config');
+    const response = await this.client.get('/api/qos/config');
     return response.data;
   }
 
   /**
-   * 配置QoS规则
+   * 配置QoS
    */
   async configureQoS(config: any) {
-    const response = await this.client.post('/api/network/qos/configure', config);
+    const response = await this.client.post('/api/qos/config', config);
+    return response.data;
+  }
+
+  /**
+   * 获取QoS规则列表
+   */
+  async getQoSRules() {
+    const response = await this.client.get('/api/qos/rules');
+    return response.data;
+  }
+
+  /**
+   * 添加QoS规则
+   */
+  async addQoSRule(rule: any) {
+    const response = await this.client.post('/api/qos/rules', rule);
+    return response.data;
+  }
+
+  /**
+   * 删除QoS规则
+   */
+  async deleteQoSRule(ruleId: string) {
+    const response = await this.client.delete(`/api/qos/rules/${ruleId}`);
+    return response.data;
+  }
+
+  /**
+   * 更新QoS规则
+   */
+  async updateQoSRule(ruleId: string, rule: any) {
+    const response = await this.client.put(`/api/qos/rules/${ruleId}`, rule);
+    return response.data;
+  }
+
+  /**
+   * 切换QoS规则状态
+   */
+  async toggleQoSRule(ruleId: string) {
+    const response = await this.client.post(`/api/qos/rules/${ruleId}/toggle`);
+    return response.data;
+  }
+
+  /**
+   * 获取QoS状态
+   */
+  async getQoSStatus() {
+    const response = await this.client.get('/api/qos/status');
     return response.data;
   }
 
@@ -507,7 +555,7 @@ class PythonAPIClient {
    * 启用QoS
    */
   async enableQoS() {
-    const response = await this.client.post('/api/network/qos/enable');
+    const response = await this.client.post('/api/qos/enable');
     return response.data;
   }
 
@@ -515,7 +563,15 @@ class PythonAPIClient {
    * 禁用QoS
    */
   async disableQoS() {
-    const response = await this.client.post('/api/network/qos/disable');
+    const response = await this.client.post('/api/qos/disable');
+    return response.data;
+  }
+
+  /**
+   * 获取QoS统计信息
+   */
+  async getQoSStatistics(iface: string) {
+    const response = await this.client.get(`/api/qos/statistics/${iface}`);
     return response.data;
   }
 

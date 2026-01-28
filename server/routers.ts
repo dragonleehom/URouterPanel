@@ -279,12 +279,43 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return await pythonAPI.configureQoS(input);
       }),
+    getRules: publicProcedure.query(async () => {
+      return await pythonAPI.getQoSRules();
+    }),
+    addRule: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        return await pythonAPI.addQoSRule(input);
+      }),
+    deleteRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.deleteQoSRule(input.ruleId);
+      }),
+    updateRule: publicProcedure
+      .input(z.object({ ruleId: z.string(), rule: z.any() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.updateQoSRule(input.ruleId, input.rule);
+      }),
+    toggleRule: publicProcedure
+      .input(z.object({ ruleId: z.string() }))
+      .mutation(async ({ input }) => {
+        return await pythonAPI.toggleQoSRule(input.ruleId);
+      }),
+    getStatus: publicProcedure.query(async () => {
+      return await pythonAPI.getQoSStatus();
+    }),
     enable: publicProcedure.mutation(async () => {
       return await pythonAPI.enableQoS();
     }),
     disable: publicProcedure.mutation(async () => {
       return await pythonAPI.disableQoS();
     }),
+    getStatistics: publicProcedure
+      .input(z.object({ iface: z.string() }))
+      .query(async ({ input }) => {
+        return await pythonAPI.getQoSStatistics(input.iface);
+      }),
   }),
 
   // ==================== 多WAN管理路由 ====================

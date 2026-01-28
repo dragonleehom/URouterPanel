@@ -345,19 +345,24 @@
   - [x] 后端API测试通过(接口列表/状态查询)
   - [x] 前端tRPC连接测试通过
 
-### 5. QoS流量控制 (优先级:中)
-- [ ] 后端API完善
-  - [ ] 实现获取QoS规则列表API
-  - [ ] 实现添加QoS规则API
-  - [ ] 实现删除QoS规则API
-  - [ ] 实现修改QoS规则API
-  - [ ] 实现启用/禁用QoS API
-- [ ] 前端集成
-  - [ ] 移除QoSManagement.tsx中的模拟数据
-  - [ ] 集成tRPC API调用
-  - [ ] 实现QoS规则管理
-- [ ] 沙箱测试
-  - [ ] QoS规则测试
+### 5. QoS流量控制 (优先级:中) ✅
+- [x] 后端API完善
+  - [x] 实现获取QoS配置API
+  - [x] 实现配置QoS API
+  - [x] 实现获取QoS规则列表API
+  - [x] 实现添加QoS规则API
+  - [x] 实现删除QoS规则API
+  - [x] 实现修改QoS规则API
+  - [x] 实现切换规则状态API
+  - [x] 实现启用/禁用QoS API
+  - [x] 实现获取QoS统计信息API
+- [x] 前端集成
+  - [x] 更新api-client.ts中的QoS API方法
+  - [x] 更新routers.ts中的QoS路由
+  - [x] TypeScript编译通过
+- [x] 沙箱测试
+  - [x] 后端API测试通过(配置/规则/状态)
+  - [x] 前端tRPC连接测试通过
 
 ### 6. 多WAN负载均衡 (优先级:中)
 - [ ] 后端API完善
