@@ -12,6 +12,7 @@ import {
   CircleDot,
   ChevronDown,
   ChevronRight,
+  Cloud,
   ExternalLink,
   Gauge,
   GitBranch,
@@ -20,7 +21,9 @@ import {
   Home,
   KeyRound,
   Network,
+  Package,
   RefreshCw,
+  Route,
   Server,
   Settings,
   Shield,
@@ -50,19 +53,27 @@ const menuItems: MenuItem[] = [
       { icon: Network, label: "接口配置", path: "/network-interfaces" },
       { icon: Wifi, label: "无线网络", path: "/wireless" },
       { icon: Shield, label: "防火墙", path: "/firewall" },
-      { icon: Gauge, label: "QoS流控", path: "/qos" },
-      { icon: GitBranch, label: "多WAN", path: "/multiwan" },
-      { icon: KeyRound, label: "VPN服务器", path: "/vpn" },
-      { icon: Globe, label: "IPv6配置", path: "/ipv6" },
       { icon: Network, label: "DHCP/DNS", path: "/dhcp-dns" },
-      { icon: RefreshCw, label: "DDNS动态DNS", path: "/ddns" },
-      { icon: ExternalLink, label: "UPnP服务", path: "/upnp" },
-      { icon: BarChart2, label: "流量统计", path: "/traffic" },
+      { icon: Route, label: "路由管理", path: "/routing" },
+      { icon: Globe, label: "IPv6配置", path: "/ipv6" },
+      { icon: GitBranch, label: "多WAN", path: "/multiwan" },
       { icon: CircleDot, label: "MAC地址", path: "/mac" },
-      { icon: CircleDot, label: "网络唤醒", path: "/wol" },
       { icon: Stethoscope, label: "网络诊断", path: "/diagnostics" },
     ],
   },
+  {
+    icon: Cloud,
+    label: "网络服务",
+    children: [
+      { icon: Gauge, label: "QoS流控", path: "/qos" },
+      { icon: KeyRound, label: "VPN服务", path: "/vpn" },
+      { icon: RefreshCw, label: "DDNS", path: "/ddns" },
+      { icon: ExternalLink, label: "UPnP", path: "/upnp" },
+      { icon: BarChart2, label: "流量统计", path: "/traffic" },
+      { icon: CircleDot, label: "网络唤醒", path: "/wol" },
+    ],
+  },
+  { icon: Package, label: "应用市场", path: "/appstore" },
   { icon: Box, label: "容器管理", path: "/containers" },
   { icon: Server, label: "虚拟机", path: "/vms" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },
@@ -73,7 +84,7 @@ const menuItems: MenuItem[] = [
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location] = useLocation();
-  const [expandedMenus, setExpandedMenus] = useState<string[]>(["网络管理"]);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["网络管理", "网络服务"]);
 
   const toggleMenu = (label: string) => {
     setExpandedMenus((prev) =>
