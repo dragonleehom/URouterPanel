@@ -173,7 +173,7 @@ export async function stopNetworkPort(id: number): Promise<void> {
   }
 }
 
-async function applyNetworkPort(port: NetworkPort): Promise<void> {
+export async function applyNetworkPort(port: NetworkPort): Promise<void> {
   if (!port.ifname || !port.enabled) return;
   
   try {

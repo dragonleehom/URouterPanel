@@ -49,6 +49,20 @@ function GlobalConfigTab() {
     },
   });
 
+  const applyAllConfigs = trpc.networkConfig.applyAllConfigs.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success("所有配置已应用");
+      } else {
+        const failedPorts = data.results.filter(r => !r.success);
+        toast.error(`部分配置应用失败: ${failedPorts.map(p => p.name).join(', ')}`);
+      }
+    },
+    onError: (error) => {
+      toast.error(`应用配置失败: ${error.message}`);
+    },
+  });
+
   const [ipv6UlaPrefix, setIpv6UlaPrefix] = useState("");
   const [packetSteering, setPacketSteering] = useState(false);
   const [rpsEnabled, setRpsEnabled] = useState(false);
@@ -151,7 +165,20 @@ function GlobalConfigTab() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button 
+          variant="outline"
+          onClick={() => {
+            applyAllConfigs.mutate();
+          }} 
+          disabled={applyAllConfigs.isPending}
+        >
+          {applyAllConfigs.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          <Play className="mr-2 h-4 w-4" />
+          应用所有配置
+        </Button>
         <Button onClick={handleSave} disabled={updateGlobalConfig.isPending}>
           {updateGlobalConfig.isPending && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -503,8 +530,90 @@ function PortConfigTab() {
                 </>
               )}
 
+              {/* 高级选项 */}
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-semibold text-sm">高级选项</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="port-mtu">MTU</Label>
+                    <Input
+                      id="port-mtu"
+                      type="number"
+                      value={editingPort.mtu || 1500}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, mtu: parseInt(e.target.value) })
+                      }
+                      placeholder="1500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="port-metric">Metric</Label>
+                    <Input
+                      id="port-metric"
+                      type="number"
+                      value={editingPort.metric || 0}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, metric: parseInt(e.target.value) })
+                      }
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="port-firewall-zone">防火墙区域</Label>
+                  <Input
+                    id="port-firewall-zone"
+                    value={editingPort.firewallZone || ""}
+                    onChange={(e) =>
+                      setEditingPort({ ...editingPort, firewallZone: e.target.value })
+                    }
+                    placeholder="wan, lan, guest"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label>启用IPv6</Label>
+                  <Switch
+                    checked={editingPort.ipv6 === 1}
+                    onCheckedChange={(checked) =>
+                      setEditingPort({ ...editingPort, ipv6: checked ? 1 : 0 })
+                    }
+                  />
+                </div>
+
+                {editingPort.ipv6 === 1 && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="port-ipv6addr">IPv6地址</Label>
+                      <Input
+                        id="port-ipv6addr"
+                        value={editingPort.ipv6addr || ""}
+                        onChange={(e) =>
+                          setEditingPort({ ...editingPort, ipv6addr: e.target.value })
+                        }
+                        placeholder="2001:db8::1/64"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="port-ipv6gateway">IPv6网关</Label>
+                      <Input
+                        id="port-ipv6gateway"
+                        value={editingPort.ipv6gateway || ""}
+                        onChange={(e) =>
+                          setEditingPort({ ...editingPort, ipv6gateway: e.target.value })
+                        }
+                        placeholder="2001:db8::fe"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
               {activeTab === "lan" && (
                 <div className="space-y-4 border-t pt-4">
+                  <h4 className="font-semibold text-sm">DHCP服务器</h4>
                   <div className="flex items-center justify-between">
                     <Label>启用DHCP服务器</Label>
                     <Switch
@@ -869,24 +978,133 @@ function DeviceConfigTab() {
                 </div>
 
                 {editingDevice.type === "bridge" && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>IGMP Snooping</Label>
+                        <p className="text-sm text-muted-foreground">
+                          网桥IGMP监听,优化多播流量
+                        </p>
+                      </div>
+                      <Switch
+                        checked={editingDevice.igmpSnooping === 1}
+                        onCheckedChange={(checked) =>
+                          setEditingDevice({
+                            ...editingDevice,
+                            igmpSnooping: checked ? 1 : 0,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-2 border-t pt-4">
+                      <Label htmlFor="bridge-ports">网桥端口</Label>
+                      <Input
+                        id="bridge-ports"
+                        value={editingDevice.bridgePorts || ""}
+                        onChange={(e) =>
+                          setEditingDevice({
+                            ...editingDevice,
+                            bridgePorts: e.target.value,
+                          })
+                        }
+                        placeholder="eth0 eth1"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        空格分隔的网络接口列表
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {editingDevice.type === "vlan" && (
+                  <div className="space-y-4 border-t pt-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vlan-id">VLAN ID</Label>
+                        <Input
+                          id="vlan-id"
+                          type="number"
+                          value={editingDevice.vlanId || ""}
+                          onChange={(e) =>
+                            setEditingDevice({
+                              ...editingDevice,
+                              vlanId: parseInt(e.target.value),
+                            })
+                          }
+                          placeholder="1-4094"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="parent-device">父设备</Label>
+                        <Input
+                          id="parent-device"
+                          value={editingDevice.parentDevice || ""}
+                          onChange={(e) =>
+                            setEditingDevice({
+                              ...editingDevice,
+                              parentDevice: e.target.value,
+                            })
+                          }
+                          placeholder="eth0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="font-semibold text-sm">IPv6 高级选项</h4>
+                  
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label>IGMP Snooping</Label>
+                      <Label>IPv6 路由通告 (RA)</Label>
                       <p className="text-sm text-muted-foreground">
-                        网桥IGMP监听,优化多播流量
+                        发送IPv6路由器通告消息
                       </p>
                     </div>
                     <Switch
-                      checked={editingDevice.igmpSnooping === 1}
+                      checked={editingDevice.ipv6Ra === 1}
                       onCheckedChange={(checked) =>
                         setEditingDevice({
                           ...editingDevice,
-                          igmpSnooping: checked ? 1 : 0,
+                          ipv6Ra: checked ? 1 : 0,
                         })
                       }
                     />
                   </div>
-                )}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>IPv6 路由请求 (RS)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        发送IPv6路由器请求消息
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editingDevice.ipv6Rs === 1}
+                      onCheckedChange={(checked) =>
+                        setEditingDevice({
+                          ...editingDevice,
+                          ipv6Rs: checked ? 1 : 0,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between border-t pt-4">
+                <Label>启用此设备</Label>
+                <Switch
+                  checked={editingDevice.enabled === 1}
+                  onCheckedChange={(checked) =>
+                    setEditingDevice({
+                      ...editingDevice,
+                      enabled: checked ? 1 : 0,
+                    })
+                  }
+                />
               </div>
             </div>
           )}

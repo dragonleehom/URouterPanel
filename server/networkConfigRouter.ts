@@ -155,4 +155,30 @@ export const networkConfigRouter = router({
     await networkConfigService.createDefaultConfig();
     return { success: true };
   }),
+
+  applyAllConfigs: publicProcedure.mutation(async () => {
+    const ports = await networkConfigService.listNetworkPorts();
+    const results = [];
+    
+    for (const port of ports) {
+      if (port.enabled) {
+        try {
+          await networkConfigService.applyNetworkPort(port as any);
+          results.push({ id: port.id, name: port.name, success: true });
+        } catch (error: any) {
+          results.push({ 
+            id: port.id, 
+            name: port.name, 
+            success: false, 
+            error: error.message 
+          });
+        }
+      }
+    }
+    
+    return { 
+      success: results.every(r => r.success),
+      results 
+    };
+  }),
 });
