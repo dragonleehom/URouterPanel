@@ -52,6 +52,7 @@ interface NetworkInterface {
   ipv4: string;
   netmask: string;
   gateway: string;
+  ipv6?: string;
   dns: string[];
   mac: string;
   mtu: number;
@@ -109,7 +110,7 @@ export default function NetworkInterfaces() {
   }
 
   // 适配接口数据
-  const interfaces: NetworkInterface[] = interfacesData?.interfaces?.map(adaptInterfaceData) || [];
+  const interfaces: NetworkInterface[] = interfacesData?.map(adaptInterfaceData) || [];
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingInterface, setEditingInterface] = useState<NetworkInterface | null>(null);
@@ -218,35 +219,34 @@ export default function NetworkInterfaces() {
       // 配置普通接口
       configureMutation.mutate({
         name: newInterface.device,
-        config: {
-          name: newInterface.name,
-          protocol: newInterface.protocol,
-          ipv4: newInterface.ipv4,
-          netmask: newInterface.netmask,
-          gateway: newInterface.gateway,
-          dns: newInterface.dns.split(",").map((d) => d.trim()).filter(Boolean),
-          mtu: newInterface.mtu,
-        },
+        ipv4: newInterface.ipv4,
+        netmask: newInterface.netmask,
+        gateway: newInterface.gateway,
+        mtu: newInterface.mtu,
       });
       setIsAddDialogOpen(false);
       resetNewInterfaceForm();
     }
   };
 
-  const handleEditInterface = () => {
+  const handleEditInterface = async () => {
     if (!editingInterface) return;
 
-    configureMutation.mutate({
-      name: editingInterface.device,
-      config: {
+    try {
+      await configureMutation.mutateAsync({
+        name: editingInterface.name,
         ipv4: editingInterface.ipv4,
         netmask: editingInterface.netmask,
         gateway: editingInterface.gateway,
+        ipv6: editingInterface.ipv6,
         mtu: editingInterface.mtu,
-      },
-    });
-    setIsEditDialogOpen(false);
-    setEditingInterface(null);
+      });
+      toast.success("接口配置成功");
+      setIsEditDialogOpen(false);
+      refetch();
+    } catch (error) {
+      toast.error("配置失败: " + (error instanceof Error ? error.message : String(error)));
+    }
   };
 
   const handleToggleInterface = (iface: NetworkInterface) => {

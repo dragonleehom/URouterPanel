@@ -10,7 +10,8 @@ import { vmRouter } from "./vmRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
-import { pythonAPI } from "./api-client";
+import { pythonAPI } from './api-client';
+import * as networkInterfaceService from './services/networkInterfaceService';
 import { z } from "zod";
 import {
   executePing,
@@ -73,48 +74,62 @@ export const appRouter = router({
   // ==================== 网络接口管理路由 ====================
   networkInterfaces: router({
     list: publicProcedure.query(async () => {
-      return await pythonAPI.getInterfaces();
+      return await networkInterfaceService.listInterfaces();
     }),
     listPhysical: publicProcedure.query(async () => {
-      return await pythonAPI.getPhysicalInterfaces();
+      return await networkInterfaceService.listPhysicalInterfaces();
     }),
     get: publicProcedure
       .input(z.object({ name: z.string() }))
       .query(async ({ input }) => {
-        return await pythonAPI.getInterface(input.name);
+        return await networkInterfaceService.getInterface(input.name);
       }),
     getStats: publicProcedure
       .input(z.object({ name: z.string() }))
       .query(async ({ input }) => {
-        return await pythonAPI.getInterfaceStats(input.name);
+        return await networkInterfaceService.getInterfaceStats(input.name);
       }),
     configure: publicProcedure
       .input(z.object({ 
         name: z.string(),
-        config: z.any()
+        ipv4: z.string().optional(),
+        netmask: z.string().optional(),
+        gateway: z.string().optional(),
+        ipv6: z.string().optional(),
+        mtu: z.number().optional(),
+        state: z.enum(['up', 'down']).optional(),
       }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.configureInterface(input.name, input.config);
+        const { name, ...config } = input;
+        await networkInterfaceService.configureInterface(name, config);
+        return { success: true, message: `接口 ${name} 配置成功` };
       }),
     enable: publicProcedure
       .input(z.object({ name: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.enableInterface(input.name);
+        await networkInterfaceService.enableInterface(input.name);
+        return { success: true, message: `接口 ${input.name} 已启用` };
       }),
     disable: publicProcedure
       .input(z.object({ name: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.disableInterface(input.name);
+        await networkInterfaceService.disableInterface(input.name);
+        return { success: true, message: `接口 ${input.name} 已禁用` };
       }),
     createBridge: publicProcedure
-      .input(z.any())
+      .input(z.object({
+        name: z.string(),
+        interfaces: z.array(z.string()),
+      }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.createBridge(input);
+        await networkInterfaceService.createBridge(input.name, input.interfaces);
+        return { success: true, message: `网桥 ${input.name} 创建成功` };
       }),
     deleteBridge: publicProcedure
       .input(z.object({ name: z.string() }))
       .mutation(async ({ input }) => {
-        return await pythonAPI.deleteBridge(input.name);
+        await networkInterfaceService.deleteBridge(input.name);
+        return { success: true, message: `网桥 ${input.name} 已删除` };
       }),
     createVLAN: publicProcedure
       .input(z.any())
