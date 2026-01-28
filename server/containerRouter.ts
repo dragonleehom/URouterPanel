@@ -283,4 +283,120 @@ export const containerRouter = router({
         });
       }
     }),
+
+  /**
+   * Docker Compose相关API
+   */
+
+  // 创建Compose项目
+  createComposeProject: publicProcedure
+    .input(
+      z.object({
+        projectName: z.string(),
+        composeContent: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await dockerService.createComposeProject(
+          input.projectName,
+          input.composeContent
+        );
+        return result;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
+
+  // 列出Compose项目
+  listComposeProjects: publicProcedure.query(async () => {
+    try {
+      const projects = await dockerService.listComposeProjects();
+      return projects;
+    } catch (error: any) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: error.message,
+      });
+    }
+  }),
+
+  // 启动Compose项目
+  startComposeProject: publicProcedure
+    .input(
+      z.object({
+        projectName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await dockerService.startComposeProject(input.projectName);
+        return result;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
+
+  // 停止Compose项目
+  stopComposeProject: publicProcedure
+    .input(
+      z.object({
+        projectName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await dockerService.stopComposeProject(input.projectName);
+        return result;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
+
+  // 删除Compose项目
+  removeComposeProject: publicProcedure
+    .input(
+      z.object({
+        projectName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const result = await dockerService.removeComposeProject(input.projectName);
+        return result;
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
+
+  // 获取Compose项目配置
+  getComposeProjectConfig: publicProcedure
+    .input(
+      z.object({
+        projectName: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      try {
+        const config = await dockerService.getComposeProjectConfig(input.projectName);
+        return { config };
+      } catch (error: any) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+    }),
 });

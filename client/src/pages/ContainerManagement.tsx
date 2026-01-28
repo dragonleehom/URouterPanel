@@ -31,6 +31,7 @@ import {
   Loader2,
   AlertCircle,
   Network,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -40,11 +41,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EditNetworkDialog } from "@/components/container/EditNetworkDialog";
+import { ContainerLogsDialog } from "@/components/container/ContainerLogsDialog";
 
 export default function ContainerManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [pullDialogOpen, setPullDialogOpen] = useState(false);
   const [editNetworkDialogOpen, setEditNetworkDialogOpen] = useState(false);
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false);
   const [selectedContainer, setSelectedContainer] = useState<{
     id: string;
     name: string;
@@ -495,6 +498,7 @@ export default function ContainerManagement() {
         <TabsList>
           <TabsTrigger value="containers">容器</TabsTrigger>
           <TabsTrigger value="images">镜像</TabsTrigger>
+          <TabsTrigger value="compose">Compose项目</TabsTrigger>
         </TabsList>
 
         {/* 容器列表 */}
@@ -567,6 +571,17 @@ export default function ContainerManagement() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedContainer({ id: container.id, name: container.name });
+                            setLogsDialogOpen(true);
+                          }}
+                          title="查看日志"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -658,6 +673,16 @@ export default function ContainerManagement() {
           onSuccess={() => {
             refetchContainers();
           }}
+        />
+      )}
+
+      {/* 容器日志对话框 */}
+      {selectedContainer && (
+        <ContainerLogsDialog
+          open={logsDialogOpen}
+          onOpenChange={setLogsDialogOpen}
+          containerId={selectedContainer.id}
+          containerName={selectedContainer.name}
         />
       )}
     </div>

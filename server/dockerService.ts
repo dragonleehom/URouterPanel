@@ -444,3 +444,254 @@ export async function disconnectContainerFromNetwork(
     throw new Error(`Failed to disconnect container from network: ${error.message}`);
   }
 }
+
+
+/**
+ * Docker Compose相关功能
+ */
+
+import { exec } from "child_process";
+import { promisify } from "util";
+import * as fs from "fs/promises";
+import * as path from "path";
+
+const execAsync = promisify(exec);
+
+// Compose项目存储目录
+const COMPOSE_DIR = "/home/ubuntu/docker-compose-projects";
+
+/**
+ * 确保Compose项目目录存在
+ */
+async function ensureComposeDir() {
+  try {
+    await fs.access(COMPOSE_DIR);
+  } catch {
+    await fs.mkdir(COMPOSE_DIR, { recursive: true });
+  }
+}
+
+/**
+ * 从docker-compose.yml内容创建项目
+ */
+export async function createComposeProject(
+  projectName: string,
+  composeContent: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    await ensureComposeDir();
+    
+    // 创建项目目录
+    const projectDir = path.join(COMPOSE_DIR, projectName);
+    await fs.mkdir(projectDir, { recursive: true });
+    
+    // 写入docker-compose.yml文件
+    const composeFile = path.join(projectDir, "docker-compose.yml");
+    await fs.writeFile(composeFile, composeContent, "utf-8");
+    
+    // 启动Compose项目
+    const { stdout, stderr } = await execAsync(
+      `docker-compose up -d`,
+      { cwd: projectDir }
+    );
+    
+    return {
+      success: true,
+      message: `项目 ${projectName} 创建成功\n${stdout}`,
+    };
+  } catch (error: any) {
+    console.error("Failed to create compose project:", error);
+    return {
+      success: false,
+      message: `创建失败: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * 列出所有Compose项目
+ */
+export async function listComposeProjects(): Promise<
+  Array<{
+    name: string;
+    path: string;
+    status: string;
+    containers: number;
+  }>
+> {
+  try {
+    await ensureComposeDir();
+    
+    const projects: Array<{
+      name: string;
+      path: string;
+      status: string;
+      containers: number;
+    }> = [];
+    
+    // 读取项目目录
+    const entries = await fs.readdir(COMPOSE_DIR, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const projectDir = path.join(COMPOSE_DIR, entry.name);
+        const composeFile = path.join(projectDir, "docker-compose.yml");
+        
+        try {
+          // 检查docker-compose.yml是否存在
+          await fs.access(composeFile);
+          
+          // 获取项目状态
+          try {
+            const { stdout } = await execAsync(
+              `docker-compose ps -q`,
+              { cwd: projectDir }
+            );
+            const containerIds = stdout.trim().split("\n").filter((id) => id);
+            const containerCount = containerIds.length;
+            
+            // 检查容器状态
+            let runningCount = 0;
+            for (const containerId of containerIds) {
+              try {
+                const container = docker.getContainer(containerId);
+                const info = await container.inspect();
+                if (info.State.Running) {
+                  runningCount++;
+                }
+              } catch {
+                // 容器可能已被删除
+              }
+            }
+            
+            projects.push({
+              name: entry.name,
+              path: projectDir,
+              status: runningCount > 0 ? "running" : "stopped",
+              containers: containerCount,
+            });
+          } catch {
+            // docker-compose ps失败,可能项目未启动
+            projects.push({
+              name: entry.name,
+              path: projectDir,
+              status: "stopped",
+              containers: 0,
+            });
+          }
+        } catch {
+          // docker-compose.yml不存在,跳过
+        }
+      }
+    }
+    
+    return projects;
+  } catch (error: any) {
+    console.error("Failed to list compose projects:", error);
+    throw new Error(`Failed to list compose projects: ${error.message}`);
+  }
+}
+
+/**
+ * 启动Compose项目
+ */
+export async function startComposeProject(
+  projectName: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const projectDir = path.join(COMPOSE_DIR, projectName);
+    const { stdout, stderr } = await execAsync(
+      `docker-compose up -d`,
+      { cwd: projectDir }
+    );
+    
+    return {
+      success: true,
+      message: `项目 ${projectName} 已启动\n${stdout}`,
+    };
+  } catch (error: any) {
+    console.error("Failed to start compose project:", error);
+    return {
+      success: false,
+      message: `启动失败: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * 停止Compose项目
+ */
+export async function stopComposeProject(
+  projectName: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const projectDir = path.join(COMPOSE_DIR, projectName);
+    const { stdout, stderr } = await execAsync(
+      `docker-compose stop`,
+      { cwd: projectDir }
+    );
+    
+    return {
+      success: true,
+      message: `项目 ${projectName} 已停止\n${stdout}`,
+    };
+  } catch (error: any) {
+    console.error("Failed to stop compose project:", error);
+    return {
+      success: false,
+      message: `停止失败: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * 删除Compose项目
+ */
+export async function removeComposeProject(
+  projectName: string
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const projectDir = path.join(COMPOSE_DIR, projectName);
+    
+    // 停止并删除容器
+    try {
+      await execAsync(
+        `docker-compose down -v`,
+        { cwd: projectDir }
+      );
+    } catch (error) {
+      console.warn("Failed to stop compose project:", error);
+    }
+    
+    // 删除项目目录
+    await fs.rm(projectDir, { recursive: true, force: true });
+    
+    return {
+      success: true,
+      message: `项目 ${projectName} 已删除`,
+    };
+  } catch (error: any) {
+    console.error("Failed to remove compose project:", error);
+    return {
+      success: false,
+      message: `删除失败: ${error.message}`,
+    };
+  }
+}
+
+/**
+ * 获取Compose项目的docker-compose.yml内容
+ */
+export async function getComposeProjectConfig(
+  projectName: string
+): Promise<string> {
+  try {
+    const projectDir = path.join(COMPOSE_DIR, projectName);
+    const composeFile = path.join(projectDir, "docker-compose.yml");
+    const content = await fs.readFile(composeFile, "utf-8");
+    return content;
+  } catch (error: any) {
+    console.error("Failed to read compose config:", error);
+    throw new Error(`Failed to read compose config: ${error.message}`);
+  }
+}

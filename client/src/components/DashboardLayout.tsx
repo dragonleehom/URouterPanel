@@ -59,6 +59,7 @@ const menuItems: MenuItem[] = [
       { icon: GitBranch, label: "多WAN", path: "/multiwan" },
       { icon: CircleDot, label: "MAC地址", path: "/mac" },
       { icon: Stethoscope, label: "网络诊断", path: "/diagnostics" },
+      { icon: Network, label: "虚拟网络", path: "/virtual-networks" },
     ],
   },
   {
@@ -75,9 +76,7 @@ const menuItems: MenuItem[] = [
   },
   { icon: Package, label: "应用市场", path: "/appstore" },
   { icon: Box, label: "容器管理", path: "/containers" },
-  { icon: Network, label: "Docker网络", path: "/docker-networks" },
   { icon: Server, label: "虚拟机", path: "/vms" },
-  { icon: Network, label: "虚拟网络", path: "/virtual-networks" },
   { icon: HardDrive, label: "硬件监控", path: "/hardware" },
   { icon: BarChart3, label: "系统监控", path: "/monitoring" },
   { icon: Activity, label: "系统状态", path: "/status" },
