@@ -22,6 +22,20 @@ import {
   listFirewallZones,
 } from "./services/firewallService";
 
+import {
+  checkFirewalldStatus,
+  listZones,
+  getZoneInfo,
+  getAllZonesInfo,
+  bindInterfaceToZone,
+  unbindInterfaceFromZone,
+  getInterfaceZone,
+  getZonePolicy,
+  applyZonePolicy,
+  reloadFirewall,
+  getFirewallStatus as getFirewalldStatus,
+} from "./services/firewalldService";
+
 export const firewallRouter = router({
   listRules: publicProcedure.query(async () => {
     try {
@@ -235,6 +249,198 @@ export const firewallRouter = router({
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: `获取防火墙区域列表失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  // ==================== Firewalld相关API ====================
+
+  /**
+   * 检查Firewalld状态
+   */
+  checkFirewalldStatus: publicProcedure.query(async () => {
+    try {
+      return await checkFirewalldStatus();
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `检查Firewalld状态失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  /**
+   * 获取所有Firewalld区域
+   */
+  listFirewalldZones: publicProcedure.query(async () => {
+    try {
+      return await listZones();
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `获取区域列表失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  /**
+   * 获取所有区域的详细信息
+   */
+  getAllFirewalldZonesInfo: publicProcedure.query(async () => {
+    try {
+      return await getAllZonesInfo();
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `获取区域信息失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  /**
+   * 获取单个区域信息
+   */
+  getFirewalldZoneInfo: publicProcedure
+    .input(z.object({ zoneName: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        return await getZoneInfo(input.zoneName);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `获取区域信息失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 绑定接口到防火墙区域
+   */
+  bindInterfaceToFirewalldZone: publicProcedure
+    .input(
+      z.object({
+        interfaceName: z.string(),
+        zoneName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await bindInterfaceToZone(input.interfaceName, input.zoneName);
+        return { message: `接口 ${input.interfaceName} 已绑定到区域 ${input.zoneName}` };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `绑定接口失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 解绑接口从防火墙区域
+   */
+  unbindInterfaceFromFirewalldZone: publicProcedure
+    .input(
+      z.object({
+        interfaceName: z.string(),
+        zoneName: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await unbindInterfaceFromZone(input.interfaceName, input.zoneName);
+        return { message: `接口 ${input.interfaceName} 已从区域 ${input.zoneName} 解绑` };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `解绑接口失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 获取接口所属的防火墙区域
+   */
+  getInterfaceFirewalldZone: publicProcedure
+    .input(z.object({ interfaceName: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        return await getInterfaceZone(input.interfaceName);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `获取接口区域失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 获取区域策略
+   */
+  getFirewalldZonePolicy: publicProcedure
+    .input(z.object({ zoneName: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        return await getZonePolicy(input.zoneName);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `获取区域策略失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 应用区域策略
+   */
+  applyFirewalldZonePolicy: publicProcedure
+    .input(
+      z.object({
+        zoneName: z.string(),
+        policy: z.object({
+          input: z.enum(["ACCEPT", "REJECT", "DROP"]).optional(),
+          output: z.enum(["ACCEPT", "REJECT", "DROP"]).optional(),
+          forward: z.enum(["ACCEPT", "REJECT", "DROP"]).optional(),
+          masquerade: z.boolean().optional(),
+        }),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await applyZonePolicy(input.zoneName, input.policy);
+        return { message: `区域 ${input.zoneName} 的策略已应用` };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `应用区域策略失败: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
+    }),
+
+  /**
+   * 重新加载Firewalld配置
+   */
+  reloadFirewalld: publicProcedure.mutation(async () => {
+    try {
+      await reloadFirewall();
+      return { message: "Firewalld配置已重新加载" };
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `重新加载Firewalld失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  /**
+   * 获取Firewalld运行状态
+   */
+  getFirewalldStatus: publicProcedure.query(async () => {
+    try {
+      return await getFirewalldStatus();
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `获取Firewalld状态失败: ${error instanceof Error ? error.message : String(error)}`,
       });
     }
   }),

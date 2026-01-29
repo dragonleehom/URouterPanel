@@ -2241,3 +2241,34 @@
   - [x] i40e → Intel XL710 40G Ethernet
 - [x] 在Tooltip中显示友好的驱动名称
 - [x] 保留原始驱动名称作为辅助信息
+
+## Firewalld防火墙系统集成 (紧急)
+
+### 安装和配置脚本
+- [x] 创建firewalld-setup.sh脚本
+- [x] 禁用UFW防火墙(如果存在)
+- [x] 安装firewalld包
+- [x] 启用firewalld服务
+- [x] 创建默认防火墙区域(wan/lan/docker等)
+- [x] 参考OpenWrt配置默认防火墙策略
+- [ ] 更新deploy.sh集成firewalld安装
+
+### OpenWrt防火墙策略研究
+- [x] 研究OpenWrt官方文档中的防火墙区域配置
+- [x] 确定wan区域的默认策略(input/forward/output)
+- [x] 确定lan区域的默认策略(input/forward/output)
+- [x] 确定docker区域的默认策略(input/forward/output)
+- [x] 确定区域间的转发规则(lan→wan/docker→wan等)
+
+### 后端防火墙服务修改
+- [x] 创建firewalldService.ts支持Firewalld
+- [x] 实现接口与防火墙区域的绑定
+- [x] 实现防火墙区域策略的获取
+- [x] 实现防火墙区域策略的应用
+- [x] 实现区域间转发规则的配置
+- [x] 更新firewallRouter.ts添加新的API端点
+
+### 前端集成
+- [ ] 更新网口配置对话框,显示防火墙区域说明
+- [ ] 添加防火墙区域策略预览功能
+- [ ] 测试接口区域绑定功能
