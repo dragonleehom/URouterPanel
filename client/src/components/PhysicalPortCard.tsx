@@ -1,10 +1,13 @@
-import { Cable, Zap } from "lucide-react";
+/**
+ * 物理端口卡片组件
+ * 样式参考附件图片: 网口图标 + 速率 + 接口名
+ */
 
 interface PhysicalPortCardProps {
   name: string;
-  type: 'ethernet' | 'fiber';
-  speed: string;
-  linkStatus: 'up' | 'down';
+  type: 'ethernet' | 'fiber' | 'wireless';
+  speed: string;  // 如 "1000 Mbit/s"
+  linkStatus: boolean;
   txActivity: boolean;
   rxActivity: boolean;
 }
@@ -17,51 +20,51 @@ export function PhysicalPortCard({
   txActivity,
   rxActivity,
 }: PhysicalPortCardProps) {
-  const isConnected = linkStatus === 'up';
+  // 格式化速率显示
+  const displaySpeed = speed || "未知";
   
+  // 链路状态颜色
+  const linkColor = linkStatus ? "bg-green-500" : "bg-gray-300";
+  
+  // 数据传输活动颜色  
+  const txColor = txActivity ? "bg-orange-500" : "bg-gray-300";
+
   return (
-    <div className="relative flex flex-col items-center justify-center w-32 h-32 border-2 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-      {/* 网口图标 */}
+    <div className="flex flex-col items-center justify-center bg-gray-50 border border-gray-200 rounded p-3 min-w-[110px]">
+      {/* 网口图标区域 */}
       <div className="relative mb-2">
-        {type === 'fiber' ? (
-          <Zap className={`h-12 w-12 ${isConnected ? 'text-blue-600' : 'text-gray-400'}`} />
-        ) : (
-          <Cable className={`h-12 w-12 ${isConnected ? 'text-green-600' : 'text-gray-400'}`} />
-        )}
+        {/* RJ45网口图标 */}
+        <svg
+          className="w-10 h-10 text-gray-700"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        >
+          <rect x="5" y="11" width="14" height="10" rx="1.5" />
+          <path d="M8 8v3M11 8v3M13 8v3M16 8v3" strokeLinecap="round" />
+        </svg>
         
-        {/* 状态指示灯 */}
-        <div className="absolute -bottom-1 -left-1 flex gap-1">
-          {/* 链路状态指示灯 (左下) */}
-          <div 
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-300'
-            }`}
-            title={isConnected ? "链路已连接" : "链路未连接"}
-          />
-        </div>
+        {/* 左下角指示灯 - 链路状态 */}
+        <div
+          className={`absolute bottom-0 left-0 w-2 h-2 rounded-full ${linkColor}`}
+          title={linkStatus ? "已连接" : "未连接"}
+        />
         
-        <div className="absolute -bottom-1 -right-1 flex gap-1">
-          {/* 数据传输状态指示灯 (右下) */}
-          <div 
-            className={`w-2 h-2 rounded-full ${
-              txActivity || rxActivity ? 'bg-amber-500 animate-pulse' : 'bg-gray-300'
-            }`}
-            title={txActivity || rxActivity ? "数据传输中" : "无数据传输"}
-          />
-        </div>
+        {/* 右下角指示灯 - 数据传输 */}
+        <div
+          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full ${txColor}`}
+          title={txActivity ? "传输中" : "空闲"}
+        />
       </div>
       
-      {/* 速率显示 (右上) */}
-      <div className="absolute top-2 right-2">
-        <span className={`text-xs font-medium ${
-          isConnected ? 'text-gray-700' : 'text-gray-400'
-        }`}>
-          {speed}
-        </span>
-      </div>
-      
-      {/* 接口名称 (底部) */}
+      {/* 速率显示 */}
       <div className="text-sm font-semibold text-gray-900">
+        {displaySpeed}
+      </div>
+      
+      {/* 接口名称 */}
+      <div className="text-xs text-gray-600 mt-0.5">
         {name}
       </div>
     </div>

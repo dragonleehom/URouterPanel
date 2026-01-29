@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Settings, Trash2, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -217,7 +218,7 @@ export function PortConfigTabNew() {
                 name={iface.name}
                 type={iface.type}
                 speed={iface.speed}
-                linkStatus={iface.linkStatus}
+                linkStatus={iface.linkStatus === 'up'}
                 txActivity={iface.txActivity}
                 rxActivity={iface.rxActivity}
               />
@@ -241,40 +242,30 @@ export function PortConfigTabNew() {
         {wanPorts.length > 0 ? (
           <div className="space-y-2">
             {wanPorts.map((port) => (
-              <div key={port.id} className="flex items-center gap-4 p-4 bg-white border rounded-lg">
-                {/* 物理接口checkbox */}
+              <div key={port.id} className="flex items-center gap-2">
+                {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
                     const isChecked = port.ifname === iface.name;
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id);
                     
                     return (
-                      <label
+                      <div
                         key={iface.name}
-                        className={`flex items-center justify-center w-32 h-12 border-2 rounded cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'border-blue-500 bg-blue-50'
-                            : isDisabled
-                            ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
+                        className="flex items-center justify-center min-w-[110px]"
                       >
-                        <input
-                          type="checkbox"
+                        <Switch
                           checked={isChecked}
                           disabled={isDisabled}
-                          onChange={() => togglePhysicalInterface(port.id, iface.name)}
-                          className="sr-only"
+                          onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
                         />
-                        <span className="text-sm font-medium">{iface.name}</span>
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
 
-                {/* 接口名称和操作 */}
+                {/* 操作按钮 */}
                 <div className="flex items-center gap-2">
-                  <span className="font-medium min-w-[80px]">{port.name}</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -315,40 +306,30 @@ export function PortConfigTabNew() {
         {lanPorts.length > 0 ? (
           <div className="space-y-2">
             {lanPorts.map((port) => (
-              <div key={port.id} className="flex items-center gap-4 p-4 bg-white border rounded-lg">
-                {/* 物理接口checkbox */}
+              <div key={port.id} className="flex items-center gap-2">
+                {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
                     const isChecked = port.ifname === iface.name;
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id);
                     
                     return (
-                      <label
+                      <div
                         key={iface.name}
-                        className={`flex items-center justify-center w-32 h-12 border-2 rounded cursor-pointer transition-colors ${
-                          isChecked
-                            ? 'border-green-500 bg-green-50'
-                            : isDisabled
-                            ? 'border-gray-200 bg-gray-100 cursor-not-allowed opacity-50'
-                            : 'border-gray-300 hover:border-gray-400'
-                        }`}
+                        className="flex items-center justify-center min-w-[110px]"
                       >
-                        <input
-                          type="checkbox"
+                        <Switch
                           checked={isChecked}
                           disabled={isDisabled}
-                          onChange={() => togglePhysicalInterface(port.id, iface.name)}
-                          className="sr-only"
+                          onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
                         />
-                        <span className="text-sm font-medium">{iface.name}</span>
-                      </label>
+                      </div>
                     );
                   })}
                 </div>
 
-                {/* 接口名称和操作 */}
+                {/* 操作按钮 */}
                 <div className="flex items-center gap-2">
-                  <span className="font-medium min-w-[80px]">{port.name}</span>
                   <Button
                     variant="outline"
                     size="sm"
