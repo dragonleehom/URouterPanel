@@ -244,6 +244,10 @@ export function PortConfigTabNew() {
                 linkStatus={iface.linkStatus === 'up'}
                 txActivity={iface.txActivity}
                 rxActivity={iface.rxActivity}
+                macAddress={iface.macAddress}
+                driver={iface.driver}
+                mtu={iface.mtu}
+                duplex={iface.duplex}
               />
             ))
           ) : (

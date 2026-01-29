@@ -2126,3 +2126,20 @@
   - [x] 检查数据库中的LAN配置(确认存在LAN_TEST)
   - [x] 检查前端是否正确渲染LAN配置(日志显示正常加载)
 - [x] 测试功能
+
+
+## 物理网口Tooltip ✅
+
+### 需求
+为物理网口添加悬浮提示,显示详细信息如驱动、MAC地址等
+
+### 任务
+- [x] 扩展后端API返回物理接口详细信息
+  - [x] 在physicalInterfaceMonitor中添加MAC地址、驱动信息获取(已存在)
+  - [x] 更新PhysicalInterface类型定义(已包含macAddress, driver, mtu, duplex)
+  - [x] 测试API返回数据
+- [x] 在PhysicalPortCard中集成Tooltip组件
+  - [x] 使用shadcn/ui的Tooltip组件
+  - [x] 显示接口名称、MAC地址、驱动、速率、双工、MTU、链路状态等信息
+  - [x] 调整样式确保美观(grid布局+颜色区分)
+- [x] 测试功能
