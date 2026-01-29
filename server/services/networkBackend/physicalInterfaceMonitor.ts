@@ -1,0 +1,210 @@
+/**
+ * 物理接口监控器
+ * 负责获取物理网卡的实时状态
+ */
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as fs from 'fs/promises';
+import type { PhysicalInterface, TrafficStats } from './types';
+
+const execAsync = promisify(exec);
+
+export class PhysicalInterfaceMonitor {
+  private trafficCache: Map<string, TrafficStats> = new Map();
+  
+  /**
+   * 获取所有物理网络接口
+   */
+  async listPhysicalInterfaces(): Promise<PhysicalInterface[]> {
+    const interfaces: PhysicalInterface[] = [];
+    
+    try {
+      // 1. 获取所有网络接口
+      const { stdout: ipOutput } = await execAsync('ip -o link show');
+      const lines = ipOutput.trim().split('\n');
+      
+      for (const line of lines) {
+        const match = line.match(/^\d+:\s+(\S+):/);
+        if (!match) continue;
+        
+        const ifname = match[1].replace('@.*', ''); // 移除VLAN标记
+        
+        // 跳过虚拟接口
+        if (ifname === 'lo' || ifname.startsWith('veth') || ifname.startsWith('docker') || 
+            ifname.startsWith('br-') || ifname.startsWith('virbr')) {
+          continue;
+        }
+        
+        // 获取接口详细信息
+        const ifaceInfo = await this.getInterfaceInfo(ifname);
+        if (ifaceInfo) {
+          interfaces.push(ifaceInfo);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to list physical interfaces:', error);
+    }
+    
+    return interfaces;
+  }
+  
+  /**
+   * 获取单个接口的详细信息
+   */
+  private async getInterfaceInfo(ifname: string): Promise<PhysicalInterface | null> {
+    try {
+      // 读取基本信息
+      const sysPath = `/sys/class/net/${ifname}`;
+      
+      const [macAddress, operstate, mtu, carrierStr] = await Promise.all([
+        fs.readFile(`${sysPath}/address`, 'utf-8').catch(() => ''),
+        fs.readFile(`${sysPath}/operstate`, 'utf-8').catch(() => 'unknown'),
+        fs.readFile(`${sysPath}/mtu`, 'utf-8').catch(() => '1500'),
+        fs.readFile(`${sysPath}/carrier`, 'utf-8').catch(() => '0'),
+      ]);
+      
+      const carrier = carrierStr.trim() === '1';
+      const linkStatus = carrier ? 'up' : 'down';
+      
+      // 获取速率和双工信息
+      let speed = 'unknown';
+      let duplex: 'full' | 'half' | 'unknown' = 'unknown';
+      let driver = 'unknown';
+      
+      try {
+        const { stdout: ethtoolOutput } = await execAsync(`ethtool ${ifname} 2>/dev/null`);
+        
+        // 解析速率
+        const speedMatch = ethtoolOutput.match(/Speed:\s+(\d+)(Mb|Gb)\/s/i);
+        if (speedMatch) {
+          const value = parseInt(speedMatch[1]);
+          const unit = speedMatch[2].toLowerCase();
+          if (unit === 'gb') {
+            speed = value >= 10 ? `${value} Gbps` : `${value} Gbps`;
+          } else {
+            speed = `${value} Mbps`;
+          }
+        }
+        
+        // 解析双工
+        const duplexMatch = ethtoolOutput.match(/Duplex:\s+(Full|Half)/i);
+        if (duplexMatch) {
+          duplex = duplexMatch[1].toLowerCase() as 'full' | 'half';
+        }
+      } catch (error) {
+        // ethtool可能失败,使用默认值
+      }
+      
+      // 获取驱动信息
+      try {
+        const { stdout: driverOutput } = await execAsync(`ethtool -i ${ifname} 2>/dev/null`);
+        const driverMatch = driverOutput.match(/driver:\s+(\S+)/i);
+        if (driverMatch) {
+          driver = driverMatch[1];
+        }
+      } catch (error) {
+        // 忽略
+      }
+      
+      // 判断接口类型(光口/电口)
+      const type = await this.detectInterfaceType(ifname);
+      
+      // 获取流量活动状态
+      const traffic = await this.getTrafficStats(ifname);
+      const prevTraffic = this.trafficCache.get(ifname);
+      
+      let txActivity = false;
+      let rxActivity = false;
+      
+      if (prevTraffic) {
+        const timeDiff = traffic.timestamp - prevTraffic.timestamp;
+        if (timeDiff > 0) {
+          // 如果1秒内有流量变化,认为有活动
+          txActivity = (traffic.txBytes - prevTraffic.txBytes) > 0;
+          rxActivity = (traffic.rxBytes - prevTraffic.rxBytes) > 0;
+        }
+      }
+      
+      this.trafficCache.set(ifname, traffic);
+      
+      return {
+        name: ifname,
+        type,
+        linkStatus: linkStatus as 'up' | 'down',
+        speed,
+        duplex,
+        txActivity,
+        rxActivity,
+        macAddress: macAddress.trim(),
+        driver,
+        mtu: parseInt(mtu.trim()),
+        operstate: operstate.trim(),
+        carrier,
+      };
+    } catch (error) {
+      console.error(`Failed to get info for ${ifname}:`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * 检测接口类型(光口/电口)
+   */
+  private async detectInterfaceType(ifname: string): Promise<'ethernet' | 'fiber'> {
+    try {
+      // 尝试使用ethtool -m检测SFP模块
+      const { stdout } = await execAsync(`ethtool -m ${ifname} 2>/dev/null`);
+      if (stdout.includes('Identifier') || stdout.includes('SFP')) {
+        return 'fiber';
+      }
+    } catch (error) {
+      // 如果ethtool -m失败,说明不是光口
+    }
+    
+    // 默认为电口
+    return 'ethernet';
+  }
+  
+  /**
+   * 获取流量统计
+   */
+  async getTrafficStats(ifname: string): Promise<TrafficStats> {
+    try {
+      const sysPath = `/sys/class/net/${ifname}/statistics`;
+      
+      const [rxBytes, txBytes, rxPackets, txPackets] = await Promise.all([
+        fs.readFile(`${sysPath}/rx_bytes`, 'utf-8').then(s => parseInt(s.trim())),
+        fs.readFile(`${sysPath}/tx_bytes`, 'utf-8').then(s => parseInt(s.trim())),
+        fs.readFile(`${sysPath}/rx_packets`, 'utf-8').then(s => parseInt(s.trim())),
+        fs.readFile(`${sysPath}/tx_packets`, 'utf-8').then(s => parseInt(s.trim())),
+      ]);
+      
+      return {
+        rxBytes,
+        txBytes,
+        rxPackets,
+        txPackets,
+        timestamp: Date.now(),
+      };
+    } catch (error) {
+      return {
+        rxBytes: 0,
+        txBytes: 0,
+        rxPackets: 0,
+        txPackets: 0,
+        timestamp: Date.now(),
+      };
+    }
+  }
+  
+  /**
+   * 清理缓存
+   */
+  clearCache() {
+    this.trafficCache.clear();
+  }
+}
+
+// 单例
+export const physicalInterfaceMonitor = new PhysicalInterfaceMonitor();

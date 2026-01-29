@@ -38,6 +38,7 @@ import {
   Upload,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { PortConfigTabNew } from "./NetworkInterfaces_PortConfigTab_New";
 
 // ==================== 全局配置标签页 ====================
 function GlobalConfigTab() {
@@ -1707,8 +1708,7 @@ function DeviceConfigTab() {
 
 // ==================== 主组件 ====================
 export default function NetworkInterfaces() {
-  const [activeTab, setActiveTab] = useState("global");
-
+  const [activeTab, setActiveTab] = useState<string>("ports");
   return (
     <div className="p-6 space-y-6">
       {/* 页面标题 */}
@@ -1722,18 +1722,18 @@ export default function NetworkInterfaces() {
       {/* 网络配置标签页 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="global">全局配置</TabsTrigger>
           <TabsTrigger value="ports">网口配置</TabsTrigger>
           <TabsTrigger value="interfaces">接口配置</TabsTrigger>
           <TabsTrigger value="devices">设备配置</TabsTrigger>
+          <TabsTrigger value="global">全局配置</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ports" className="space-y-4">
+          <PortConfigTabNew />
+        </TabsContent>
 
         <TabsContent value="global" className="space-y-4">
           <GlobalConfigTab />
-        </TabsContent>
-
-        <TabsContent value="ports" className="space-y-4">
-          <PortConfigTab />
         </TabsContent>
 
         <TabsContent value="interfaces" className="space-y-4">

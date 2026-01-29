@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from './_core/trpc';
 import * as networkConfigService from './services/networkConfigService';
+import { networkConfigManager } from './services/networkBackend';
 
 export const networkConfigRouter = router({
   // ==================== 全局配置 ====================
@@ -179,6 +180,40 @@ export const networkConfigRouter = router({
     return { 
       success: results.every(r => r.success),
       results 
+    };
+  }),
+  
+  // ==================== 物理接口管理 ====================
+  
+  listPhysicalInterfaces: publicProcedure.query(async () => {
+    return await networkConfigManager.listPhysicalInterfaces();
+  }),
+  
+  syncSystemConfig: publicProcedure.mutation(async () => {
+    try {
+      const systemConfig = await networkConfigManager.readSystemConfig();
+      
+      // TODO: 将系统配置同步到数据库
+      // 这里需要将systemConfig.configuredPorts与数据库中的配置对比
+      // 并更新数据库
+      
+      return { 
+        success: true,
+        backendType: await networkConfigManager.getBackendType(),
+        physicalInterfaces: systemConfig.interfaces.length,
+        configuredPorts: systemConfig.configuredPorts.length,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }),
+  
+  getBackendInfo: publicProcedure.query(async () => {
+    return {
+      type: await networkConfigManager.getBackendType(),
     };
   }),
 });

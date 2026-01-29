@@ -177,38 +177,64 @@ export async function applyNetworkPort(port: NetworkPort): Promise<void> {
   if (!port.ifname || !port.enabled) return;
   
   try {
-    // 启用接口
-    await execAsync(`ip link set ${port.ifname} up`);
+    // 解析物理接口列表(支持逗号分隔)
+    const physicalInterfaces = port.ifname.split(',').map(s => s.trim()).filter(s => s);
+    
+    let targetInterface = port.ifname;
+    
+    // 如果有多个物理接口,创建网桥
+    if (physicalInterfaces.length > 1) {
+      const bridgeName = `br-${port.name}`;
+      
+      // 创建网桥
+      await execAsync(`ip link add name ${bridgeName} type bridge`).catch(() => {});
+      await execAsync(`ip link set ${bridgeName} up`);
+      
+      // 将物理接口添加到网桥
+      for (const iface of physicalInterfaces) {
+        await execAsync(`ip link set ${iface} master ${bridgeName}`).catch(() => {});
+        await execAsync(`ip link set ${iface} up`).catch(() => {});
+      }
+      
+      targetInterface = bridgeName;
+    } else {
+      // 单个物理接口,直接启用
+      await execAsync(`ip link set ${targetInterface} up`);
+    }
     
     // 设置MTU
     if (port.mtu) {
-      await execAsync(`ip link set ${port.ifname} mtu ${port.mtu}`);
+      await execAsync(`ip link set ${targetInterface} mtu ${port.mtu}`);
     }
     
     // 配置IP地址
     if (port.protocol === 'static' && port.ipaddr && port.netmask) {
       // 清除旧IP
-      await execAsync(`ip addr flush dev ${port.ifname}`).catch(() => {});
+      await execAsync(`ip addr flush dev ${targetInterface}`).catch(() => {});
       
       // 添加新IP
       const cidr = netmaskToCIDR(port.netmask);
-      await execAsync(`ip addr add ${port.ipaddr}/${cidr} dev ${port.ifname}`);
+      await execAsync(`ip addr add ${port.ipaddr}/${cidr} dev ${targetInterface}`);
       
       // 配置网关
       if (port.gateway && port.type === 'wan') {
-        await execAsync(`ip route add default via ${port.gateway} dev ${port.ifname} metric ${port.metric || 0}`).catch(() => {});
+        await execAsync(`ip route add default via ${port.gateway} dev ${targetInterface} metric ${port.metric || 0}`).catch(() => {});
       }
     } else if (port.protocol === 'dhcp') {
       // 启动DHCP客户端
-      await execAsync(`dhclient ${port.ifname}`).catch(() => {});
+      await execAsync(`dhclient ${targetInterface}`).catch(() => {});
+    } else if (port.protocol === 'pppoe' && port.pppoeUsername && port.pppoePassword) {
+      // PPPoE配置
+      // TODO: 实现PPPoE拨号配置
+      console.log(`PPPoE configuration for ${port.name}: username=${port.pppoeUsername}`);
     }
     
     // 配置IPv6
     if (port.ipv6 && port.ipv6addr) {
-      await execAsync(`ip -6 addr add ${port.ipv6addr} dev ${port.ifname}`).catch(() => {});
+      await execAsync(`ip -6 addr add ${port.ipv6addr} dev ${targetInterface}`).catch(() => {});
       
       if (port.ipv6gateway) {
-        await execAsync(`ip -6 route add default via ${port.ipv6gateway} dev ${port.ifname}`).catch(() => {});
+        await execAsync(`ip -6 route add default via ${port.ipv6gateway} dev ${targetInterface}`).catch(() => {});
       }
     }
     
