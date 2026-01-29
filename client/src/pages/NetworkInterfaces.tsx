@@ -1591,52 +1591,38 @@ function DeviceConfigTab() {
 
 // ==================== 主组件 ====================
 export default function NetworkInterfaces() {
-  const [activeTab, setActiveTab] = useState("global");
+  const [activeTab, setActiveTab] = useState("ports");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">网络接口配置</h1>
-          <p className="text-muted-foreground mt-1">
-            配置网络接口、设备和全局网络参数
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      {/* 页面标题 */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">网络接口配置</h1>
+        <p className="text-sm text-gray-600 mt-1">
+          配置网络接口、设备和全局网络参数
+        </p>
       </div>
 
+      {/* 全局配置卡片 */}
+      <GlobalConfigTab />
+
+      {/* 网络配置标签页 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="global">
-            <Globe className="mr-2 h-4 w-4" />
-            全局配置
-          </TabsTrigger>
-          <TabsTrigger value="ports">
-            <Network className="mr-2 h-4 w-4" />
-            网口配置
-          </TabsTrigger>
-          <TabsTrigger value="interfaces">
-            <Settings className="mr-2 h-4 w-4" />
-            接口配置
-          </TabsTrigger>
-          <TabsTrigger value="devices">
-            <Network className="mr-2 h-4 w-4" />
-            设备配置
-          </TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="ports">网口配置</TabsTrigger>
+          <TabsTrigger value="interfaces">接口配置</TabsTrigger>
+          <TabsTrigger value="devices">设备配置</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="global" className="mt-6">
-          <GlobalConfigTab />
-        </TabsContent>
-
-        <TabsContent value="ports" className="mt-6">
+        <TabsContent value="ports" className="space-y-4">
           <PortConfigTab />
         </TabsContent>
 
-        <TabsContent value="interfaces" className="mt-6">
+        <TabsContent value="interfaces" className="space-y-4">
           <InterfaceConfigTab />
         </TabsContent>
 
-        <TabsContent value="devices" className="mt-6">
+        <TabsContent value="devices" className="space-y-4">
           <DeviceConfigTab />
         </TabsContent>
       </Tabs>
