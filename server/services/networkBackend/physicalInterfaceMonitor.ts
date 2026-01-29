@@ -10,6 +10,56 @@ import type { PhysicalInterface, TrafficStats } from './types';
 
 const execAsync = promisify(exec);
 
+/**
+ * 驱动名称友好转换映射表
+ */
+const DRIVER_FRIENDLY_NAMES: Record<string, string> = {
+  // Realtek
+  'r8125': 'Realtek 2.5G Ethernet',
+  'r8169': 'Realtek Gigabit Ethernet',
+  'r8168': 'Realtek Gigabit Ethernet',
+  'r8101': 'Realtek Fast Ethernet',
+  
+  // Intel
+  'igc': 'Intel 2.5G Ethernet',
+  'e1000e': 'Intel Gigabit Ethernet',
+  'e1000': 'Intel Gigabit Ethernet',
+  'ixgbe': 'Intel 10G Ethernet',
+  'i40e': 'Intel XL710 40G Ethernet',
+  'ice': 'Intel E810 Ethernet',
+  'igb': 'Intel Gigabit Ethernet',
+  
+  // Broadcom
+  'bnx2': 'Broadcom NetXtreme II Gigabit',
+  'bnx2x': 'Broadcom NetXtreme II 10G',
+  'tg3': 'Broadcom Tigon3 Gigabit',
+  'bnxt_en': 'Broadcom NetXtreme-C/E',
+  
+  // Marvell
+  'sky2': 'Marvell Yukon 2 Gigabit',
+  'skge': 'Marvell Yukon Gigabit',
+  
+  // Atheros/Qualcomm
+  'atl1c': 'Atheros/Qualcomm Gigabit',
+  'alx': 'Qualcomm Atheros Gigabit',
+  
+  // Mellanox
+  'mlx4_en': 'Mellanox ConnectX-3 10G/40G',
+  'mlx5_core': 'Mellanox ConnectX-4/5/6',
+  
+  // Others
+  'virtio_net': 'VirtIO Virtual Ethernet',
+  'vmxnet3': 'VMware vmxnet3 Virtual',
+  'veth': 'Virtual Ethernet',
+};
+
+/**
+ * 将驱动名称转换为友好名称
+ */
+function getFriendlyDriverName(driver: string): string {
+  return DRIVER_FRIENDLY_NAMES[driver] || driver;
+}
+
 export class PhysicalInterfaceMonitor {
   private trafficCache: Map<string, TrafficStats> = new Map();
   
@@ -163,7 +213,9 @@ export class PhysicalInterfaceMonitor {
         const { stdout: driverOutput } = await execAsync(`ethtool -i ${ifname} 2>/dev/null`);
         const driverMatch = driverOutput.match(/driver:\s+(\S+)/i);
         if (driverMatch) {
-          driver = driverMatch[1];
+          const rawDriver = driverMatch[1];
+          // 转换为友好名称
+          driver = getFriendlyDriverName(rawDriver);
         }
       } catch (error) {
         // 忽略

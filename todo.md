@@ -2221,3 +2221,23 @@
   - [ ] 根据linkStatus动态调整网口名称颜色
   - [ ] 使用加粗字体
 - [ ] 测试功能
+
+## 物理网口UI修复 (紧急)
+
+### 对齐问题修复
+- [x] 将物理网口和toggle switch放置在HTML表格内
+- [x] 使用表格列控制居中对齐(不显示表格边框)
+- [x] 确保页面变化时对齐关系保持稳定
+- [x] 测试不同数量网口时的布局稳定性
+
+### 驱动显示优化
+- [x] 确认后端已使用ethtool -i查询驱动信息
+- [x] 添加驱动名称友好转换映射表
+  - [x] r8125 → Realtek 2.5G Ethernet
+  - [x] igc → Intel 2.5G Ethernet
+  - [x] e1000e → Intel Gigabit Ethernet
+  - [x] r8169 → Realtek Gigabit Ethernet
+  - [x] ixgbe → Intel 10G Ethernet
+  - [x] i40e → Intel XL710 40G Ethernet
+- [x] 在Tooltip中显示友好的驱动名称
+- [x] 保留原始驱动名称作为辅助信息

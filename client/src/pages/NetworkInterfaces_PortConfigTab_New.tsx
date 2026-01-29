@@ -268,11 +268,11 @@ export function PortConfigTabNew() {
         </div>
 
         {wanPorts.length > 0 ? (
-          <div className="space-y-2">
-            {wanPorts.map((port) => (
-              <div key={port.id} className="flex items-center justify-center gap-4">
-                {/* 物理接口toggle switch - 居中对齐 */}
-                <div className="flex gap-4">
+          <table className="w-full border-collapse">
+            <tbody>
+              {wanPorts.map((port) => (
+                <tr key={port.id}>
+                  {/* 物理接口toggle switch列 - 表格自动居中对齐 */}
                   {physicalInterfaces?.map((iface) => {
                     // 支持多选:检查ifname中是否包含该接口
                     const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
@@ -280,45 +280,49 @@ export function PortConfigTabNew() {
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
-                      <div
+                      <td
                         key={iface.name}
-                        className="flex items-center justify-center min-w-[110px]"
+                        className="text-center py-2 w-[110px]"
                       >
-                        <Switch
-                          checked={isChecked}
-                          disabled={isDisabled}
-                          onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
-                        />
-                      </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
+                          />
+                        </div>
+                      </td>
                     );
                   })}
-                </div>
 
-                {/* 接口名称和操作按钮 - 移到右侧 */}
-                <div className="flex items-center gap-2 ml-auto">
-                  <span className="font-semibold text-gray-900">{port.name}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditPort(port)}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`确定删除接口 ${port.name}?`)) {
-                        deletePort.mutate({ id: port.id });
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  {/* 接口名称和操作按钮列 */}
+                  <td className="text-right py-2 pl-8">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-semibold text-gray-900">{port.name}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditPort(port)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`确定删除接口 ${port.name}?`)) {
+                            deletePort.mutate({ id: port.id });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p className="text-gray-500 text-sm">暂无WAN接口配置</p>
         )}
@@ -335,11 +339,11 @@ export function PortConfigTabNew() {
         </div>
 
         {lanPorts.length > 0 ? (
-          <div className="space-y-2">
-            {lanPorts.map((port) => (
-              <div key={port.id} className="flex items-center justify-center gap-4">
-                {/* 物理接口toggle switch - 居中对齐 */}
-                <div className="flex gap-4">
+          <table className="w-full border-collapse">
+            <tbody>
+              {lanPorts.map((port) => (
+                <tr key={port.id}>
+                  {/* 物理接口toggle switch列 - 表格自动居中对齐 */}
                   {physicalInterfaces?.map((iface) => {
                     // 支持多选:检查ifname中是否包含该接口
                     const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
@@ -347,45 +351,49 @@ export function PortConfigTabNew() {
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
-                      <div
+                      <td
                         key={iface.name}
-                        className="flex items-center justify-center min-w-[110px]"
+                        className="text-center py-2 w-[110px]"
                       >
-                        <Switch
-                          checked={isChecked}
-                          disabled={isDisabled}
-                          onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
-                        />
-                      </div>
+                        <div className="flex justify-center">
+                          <Switch
+                            checked={isChecked}
+                            disabled={isDisabled}
+                            onCheckedChange={() => togglePhysicalInterface(port.id, iface.name)}
+                          />
+                        </div>
+                      </td>
                     );
                   })}
-                </div>
 
-                {/* 接口名称和操作按钮 - 移到右侧 */}
-                <div className="flex items-center gap-2 ml-auto">
-                  <span className="font-semibold text-gray-900">{port.name}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditPort(port)}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (confirm(`确定删除接口 ${port.name}?`)) {
-                        deletePort.mutate({ id: port.id });
-                      }
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                  {/* 接口名称和操作按钮列 */}
+                  <td className="text-right py-2 pl-8">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="font-semibold text-gray-900">{port.name}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditPort(port)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`确定删除接口 ${port.name}?`)) {
+                            deletePort.mutate({ id: port.id });
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p className="text-gray-500 text-sm">暂无LAN接口配置</p>
         )}
