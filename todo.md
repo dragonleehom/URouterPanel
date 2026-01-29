@@ -2302,3 +2302,10 @@
 - [ ] 使用shadcn/ui Select组件
 - [ ] 添加区域说明tooltip
 - [ ] 测试下拉菜单功能
+
+## 网口配置标签页防火墙区域UI修复 (紧急) ✅
+
+- [x] 检查PortConfigTab弹框中的防火墙区域代码
+- [x] 将防火墙区域复选框改为Select下拉菜单
+- [x] 与InterfaceConfigTab保持一致的UI
+- [x] 测试WAN/LAN接口配置弹框
