@@ -308,8 +308,10 @@ function PortConfigTab() {
 
   const updatePort = trpc.networkConfig.updatePort.useMutation({
     onSuccess: () => {
+      console.log('[PortConfigTab updatePort] onSuccess triggered');
       toast.success("网口更新成功");
       utils.networkConfig.listPorts.invalidate();
+      console.log('[PortConfigTab updatePort] closing dialog...');
       setIsDialogOpen(false);
       setEditingPort(null);
     },
@@ -371,6 +373,8 @@ function PortConfigTab() {
   const handleSavePort = () => {
     if (!editingPort) return;
 
+    console.log('[handleSavePort] editingPort:', editingPort);
+
     if (editingPort.id) {
       // 只传递API需要的字段，过滤掉createdAt等数据库字段
       const updateData = {
@@ -395,6 +399,7 @@ function PortConfigTab() {
         dhcpTime: editingPort.dhcpTime,
         enabled: editingPort.enabled,
       };
+      console.log('[handleSavePort] calling updatePort.mutate with:', updateData);
       updatePort.mutate(updateData);
     } else {
       createPort.mutate(editingPort);
