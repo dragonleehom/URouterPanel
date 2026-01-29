@@ -97,7 +97,8 @@ firewall-cmd --permanent --zone=lan --add-service=https
 firewall-cmd --permanent --zone=lan --add-service=dns
 firewall-cmd --permanent --zone=lan --add-service=dhcp
 firewall-cmd --permanent --zone=lan --add-service=dhcpv6
-echo "  ✓ LAN区域策略已配置 (target=ACCEPT, services=ssh/http/https/dns/dhcp)"
+firewall-cmd --permanent --zone=lan --add-port=3000/tcp  # Web管理界面端口
+echo "  ✓ LAN区域策略已配置 (target=ACCEPT, services=ssh/http/https/dns/dhcp, ports=3000)"
 
 # 创建Docker区域
 echo "创建Docker区域..."
@@ -150,6 +151,7 @@ echo ""
 echo "LAN区域:"
 echo "  - 默认策略: ACCEPT (允许所有流量)"
 echo "  - 服务: SSH, HTTP, HTTPS, DNS, DHCP"
+echo "  - 端口: 3000 (Web管理界面)"
 echo "  - 用途: 内网接口,信任的网络"
 echo ""
 echo "Docker区域:"
