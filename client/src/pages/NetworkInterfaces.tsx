@@ -372,7 +372,30 @@ function PortConfigTab() {
     if (!editingPort) return;
 
     if (editingPort.id) {
-      updatePort.mutate(editingPort);
+      // 只传递API需要的字段，过滤掉createdAt等数据库字段
+      const updateData = {
+        id: editingPort.id,
+        name: editingPort.name,
+        type: editingPort.type,
+        protocol: editingPort.protocol,
+        ifname: editingPort.ifname,
+        ipaddr: editingPort.ipaddr,
+        netmask: editingPort.netmask,
+        gateway: editingPort.gateway,
+        dns: editingPort.dns,
+        ipv6: editingPort.ipv6,
+        ipv6addr: editingPort.ipv6addr,
+        ipv6gateway: editingPort.ipv6gateway,
+        mtu: editingPort.mtu,
+        metric: editingPort.metric,
+        firewallZone: editingPort.firewallZone,
+        dhcpServer: editingPort.dhcpServer,
+        dhcpStart: editingPort.dhcpStart,
+        dhcpEnd: editingPort.dhcpEnd,
+        dhcpTime: editingPort.dhcpTime,
+        enabled: editingPort.enabled,
+      };
+      updatePort.mutate(updateData);
     } else {
       createPort.mutate(editingPort);
     }
@@ -1591,7 +1614,7 @@ function DeviceConfigTab() {
 
 // ==================== 主组件 ====================
 export default function NetworkInterfaces() {
-  const [activeTab, setActiveTab] = useState("ports");
+  const [activeTab, setActiveTab] = useState("global");
 
   return (
     <div className="p-6 space-y-6">
@@ -1603,16 +1626,18 @@ export default function NetworkInterfaces() {
         </p>
       </div>
 
-      {/* 全局配置卡片 */}
-      <GlobalConfigTab />
-
       {/* 网络配置标签页 */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="global">全局配置</TabsTrigger>
           <TabsTrigger value="ports">网口配置</TabsTrigger>
           <TabsTrigger value="interfaces">接口配置</TabsTrigger>
           <TabsTrigger value="devices">设备配置</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="global" className="space-y-4">
+          <GlobalConfigTab />
+        </TabsContent>
 
         <TabsContent value="ports" className="space-y-4">
           <PortConfigTab />
