@@ -294,6 +294,7 @@ function PortConfigTab() {
   const utils = trpc.useUtils();
   const { data: ports, isLoading } = trpc.networkConfig.listPorts.useQuery();
   const devices = trpc.networkConfig.listDevices.useQuery();
+  const { data: firewallZones } = trpc.firewall.listZones.useQuery();
   
   const createPort = trpc.networkConfig.createPort.useMutation({
     onSuccess: () => {
@@ -754,7 +755,7 @@ function PortConfigTab() {
                 <div className="space-y-2">
                   <Label>防火墙区域</Label>
                   <div className="flex flex-wrap gap-4">
-                    {["wan", "lan", "guest", "dmz"].map((zone) => {
+                    {(firewallZones || ["wan", "lan", "guest", "dmz"]).map((zone) => {
                       const currentZones = editingPort.firewallZone ? editingPort.firewallZone.split(",").map((z: string) => z.trim()) : [];
                       const isChecked = currentZones.includes(zone);
                       return (

@@ -19,6 +19,7 @@ import {
   deleteNATRule,
   reloadAllRules,
   getFirewallStatus,
+  listFirewallZones,
 } from "./services/firewallService";
 
 export const firewallRouter = router({
@@ -223,6 +224,17 @@ export const firewallRouter = router({
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: `获取状态失败: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  }),
+
+  listZones: publicProcedure.query(async () => {
+    try {
+      return await listFirewallZones();
+    } catch (error) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `获取防火墙区域列表失败: ${error instanceof Error ? error.message : String(error)}`,
       });
     }
   }),

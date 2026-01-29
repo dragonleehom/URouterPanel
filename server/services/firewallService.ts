@@ -570,6 +570,45 @@ export async function reloadAllRules(): Promise<void> {
 }
 
 /**
+ * 获取防火墙区域列表
+ * 从系统配置中读取实际存在的防火墙区域
+ */
+export async function listFirewallZones(): Promise<string[]> {
+  try {
+    // 尝试从 firewalld 读取区域
+    try {
+      const { stdout } = await execAsync('firewall-cmd --get-zones 2>/dev/null');
+      if (stdout.trim()) {
+        return stdout.trim().split(/\s+/);
+      }
+    } catch (error) {
+      // firewalld 不可用，继续尝试其他方法
+    }
+    
+    // 尝试从 /etc/firewalld/zones 目录读取
+    try {
+      const zonesDir = '/etc/firewalld/zones';
+      const files = await fs.readdir(zonesDir);
+      const zones = files
+        .filter(f => f.endsWith('.xml'))
+        .map(f => f.replace('.xml', ''));
+      if (zones.length > 0) {
+        return zones;
+      }
+    } catch (error) {
+      // 目录不存在
+    }
+    
+    // 如果以上方法都失败，返回默认的常用区域
+    return ['wan', 'lan', 'guest', 'dmz'];
+  } catch (error) {
+    console.error('Failed to list firewall zones:', error);
+    // 发生错误时返回默认区域
+    return ['wan', 'lan', 'guest', 'dmz'];
+  }
+}
+
+/**
  * 获取防火墙状态
  */
 export async function getFirewallStatus(): Promise<{

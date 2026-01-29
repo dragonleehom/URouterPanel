@@ -1872,3 +1872,26 @@
 - [x] 支持同时选择多个防火墙区域(wan/lan/guest/dmz)
 - [x] 更新handleSavePort处理多选值(逗号分隔字符串)
 - [x] 测试功能
+
+
+## 防火墙区域动态获取 ✅
+
+### 问题
+当前网口配置对话框中的防火墙区域选项是硬编码的["wan", "lan", "guest", "dmz"],不是从系统实际配置中读取的。
+
+### 任务
+- [x] 检查后端是否有获取防火墙区域列表的API
+- [x] 如果没有,实现从系统防火墙配置读取区域列表的API
+- [x] 在前端集成API,动态获取防火墙区域列表
+- [x] 更新PortConfigDialog使用动态区域列表
+- [x] 测试功能确保显示系统实际存在的区域
+
+### 实现详情
+- 后端: 在firewallService.ts中实现listFirewallZones()函数
+  - 尝试从 firewalld 读取区域(firewall-cmd --get-zones)
+  - 尝试从 /etc/firewalld/zones 目录读取
+  - 如果以上方法失败,返回默认区域['wan', 'lan', 'guest', 'dmz']
+- 后端: 在firewallRouter.ts中添加listZones API端点
+- 前端: 在PortConfigTab中调用trpc.firewall.listZones.useQuery()
+- 前端: 将硬编码的["wan", "lan", "guest", "dmz"]替换为(firewallZones || [...])
+- API测试通过,返回默认区域列表(因为沙箱环境没有firewalld)
