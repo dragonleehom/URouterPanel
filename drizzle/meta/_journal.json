@@ -43,6 +43,13 @@
       "when": 1769641718000,
       "tag": "0005_outstanding_fabian_cortez",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1769673190631,
+      "tag": "0006_glamorous_dexter_bennett",
+      "breakpoints": true
     }
   ]
 }

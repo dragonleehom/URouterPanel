@@ -228,6 +228,10 @@ export const networkPorts = mysqlTable("network_ports", {
   dhcpStart: varchar("dhcpStart", { length: 50 }), // DHCP起始IP
   dhcpEnd: varchar("dhcpEnd", { length: 50 }), // DHCP结束IP
   dhcpTime: varchar("dhcpTime", { length: 20 }).default("12h"), // DHCP租约时间
+  // PPPoE配置字段
+  pppoeUsername: varchar("pppoeUsername", { length: 100 }), // PPPoE用户名
+  pppoePassword: varchar("pppoePassword", { length: 100 }), // PPPoE密码
+  pppoeServiceName: varchar("pppoeServiceName", { length: 100 }), // PPPoE服务名称
   enabled: int("enabled").default(1), // 启用状态
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

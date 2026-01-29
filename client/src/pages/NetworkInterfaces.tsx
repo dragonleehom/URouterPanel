@@ -293,6 +293,7 @@ function PortConfigTab() {
 
   const utils = trpc.useUtils();
   const { data: ports, isLoading } = trpc.networkConfig.listPorts.useQuery();
+  const devices = trpc.networkConfig.listDevices.useQuery();
   
   const createPort = trpc.networkConfig.createPort.useMutation({
     onSuccess: () => {
@@ -572,15 +573,38 @@ function PortConfigTab() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="port-ifname">物理接口</Label>
-                <Input
-                  id="port-ifname"
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="port-ifname">物理接口</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      // 重新获取设备列表
+                      devices.refetch();
+                      toast.success('正在扫描网络设备...');
+                    }}
+                  >
+                    扫描设备
+                  </Button>
+                </div>
+                <Select
                   value={editingPort.ifname || ""}
-                  onChange={(e) =>
-                    setEditingPort({ ...editingPort, ifname: e.target.value })
+                  onValueChange={(value) =>
+                    setEditingPort({ ...editingPort, ifname: value })
                   }
-                  placeholder="例如: eth0, eth1"
-                />
+                >
+                  <SelectTrigger id="port-ifname">
+                    <SelectValue placeholder="选择物理接口" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {devices.data?.map((device) => (
+                      <SelectItem key={device.name} value={device.name}>
+                        {device.name} ({device.type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -601,6 +625,47 @@ function PortConfigTab() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {editingPort.protocol === "pppoe" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="port-pppoe-username">PPPoE用户名</Label>
+                    <Input
+                      id="port-pppoe-username"
+                      value={editingPort.pppoeUsername || ""}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, pppoeUsername: e.target.value })
+                      }
+                      placeholder="输入ISP提供的用户名"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="port-pppoe-password">PPPoE密码</Label>
+                    <Input
+                      id="port-pppoe-password"
+                      type="password"
+                      value={editingPort.pppoePassword || ""}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, pppoePassword: e.target.value })
+                      }
+                      placeholder="输入ISP提供的密码"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="port-pppoe-service">服务名称(可选)</Label>
+                    <Input
+                      id="port-pppoe-service"
+                      value={editingPort.pppoeServiceName || ""}
+                      onChange={(e) =>
+                        setEditingPort({ ...editingPort, pppoeServiceName: e.target.value })
+                      }
+                      placeholder="通常可以留空"
+                    />
+                  </div>
+                </>
+              )}
 
               {editingPort.protocol === "static" && (
                 <>
@@ -687,15 +752,35 @@ function PortConfigTab() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="port-firewall-zone">防火墙区域</Label>
-                  <Input
-                    id="port-firewall-zone"
-                    value={editingPort.firewallZone || ""}
-                    onChange={(e) =>
-                      setEditingPort({ ...editingPort, firewallZone: e.target.value })
-                    }
-                    placeholder="wan, lan, guest"
-                  />
+                  <Label>防火墙区域</Label>
+                  <div className="flex flex-wrap gap-4">
+                    {["wan", "lan", "guest", "dmz"].map((zone) => {
+                      const currentZones = editingPort.firewallZone ? editingPort.firewallZone.split(",").map((z: string) => z.trim()) : [];
+                      const isChecked = currentZones.includes(zone);
+                      return (
+                        <div key={zone} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`zone-${zone}`}
+                            checked={isChecked}
+                            onChange={(e) => {
+                              let newZones: string[];
+                              if (e.target.checked) {
+                                newZones = [...currentZones, zone];
+                              } else {
+                                newZones = currentZones.filter((z: string) => z !== zone);
+                              }
+                              setEditingPort({ ...editingPort, firewallZone: newZones.join(",") });
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <label htmlFor={`zone-${zone}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            {zone.toUpperCase()}
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
