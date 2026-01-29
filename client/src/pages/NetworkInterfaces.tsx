@@ -376,29 +376,31 @@ function PortConfigTab() {
     console.log('[handleSavePort] editingPort:', editingPort);
 
     if (editingPort.id) {
-      // 只传递API需要的字段，过滤掉createdAt等数据库字段
-      const updateData = {
+      // 只传递API需要的字段,过滤掉createdAt等数据库字段,并将null转换为undefined
+      const updateData: any = {
         id: editingPort.id,
-        name: editingPort.name,
-        type: editingPort.type,
-        protocol: editingPort.protocol,
-        ifname: editingPort.ifname,
-        ipaddr: editingPort.ipaddr,
-        netmask: editingPort.netmask,
-        gateway: editingPort.gateway,
-        dns: editingPort.dns,
-        ipv6: editingPort.ipv6,
-        ipv6addr: editingPort.ipv6addr,
-        ipv6gateway: editingPort.ipv6gateway,
-        mtu: editingPort.mtu,
-        metric: editingPort.metric,
-        firewallZone: editingPort.firewallZone,
-        dhcpServer: editingPort.dhcpServer,
-        dhcpStart: editingPort.dhcpStart,
-        dhcpEnd: editingPort.dhcpEnd,
-        dhcpTime: editingPort.dhcpTime,
-        enabled: editingPort.enabled,
       };
+      
+      // 只添加非null的字段
+      if (editingPort.name !== null && editingPort.name !== undefined) updateData.name = editingPort.name;
+      if (editingPort.type !== null && editingPort.type !== undefined) updateData.type = editingPort.type;
+      if (editingPort.protocol !== null && editingPort.protocol !== undefined) updateData.protocol = editingPort.protocol;
+      if (editingPort.ifname !== null && editingPort.ifname !== undefined) updateData.ifname = editingPort.ifname;
+      if (editingPort.ipaddr !== null && editingPort.ipaddr !== undefined) updateData.ipaddr = editingPort.ipaddr;
+      if (editingPort.netmask !== null && editingPort.netmask !== undefined) updateData.netmask = editingPort.netmask;
+      if (editingPort.gateway !== null && editingPort.gateway !== undefined) updateData.gateway = editingPort.gateway;
+      if (editingPort.dns !== null && editingPort.dns !== undefined) updateData.dns = editingPort.dns;
+      if (editingPort.ipv6 !== null && editingPort.ipv6 !== undefined) updateData.ipv6 = editingPort.ipv6;
+      if (editingPort.ipv6addr !== null && editingPort.ipv6addr !== undefined) updateData.ipv6addr = editingPort.ipv6addr;
+      if (editingPort.ipv6gateway !== null && editingPort.ipv6gateway !== undefined) updateData.ipv6gateway = editingPort.ipv6gateway;
+      if (editingPort.mtu !== null && editingPort.mtu !== undefined) updateData.mtu = editingPort.mtu;
+      if (editingPort.metric !== null && editingPort.metric !== undefined) updateData.metric = editingPort.metric;
+      if (editingPort.firewallZone !== null && editingPort.firewallZone !== undefined) updateData.firewallZone = editingPort.firewallZone;
+      if (editingPort.dhcpServer !== null && editingPort.dhcpServer !== undefined) updateData.dhcpServer = editingPort.dhcpServer;
+      if (editingPort.dhcpStart !== null && editingPort.dhcpStart !== undefined) updateData.dhcpStart = editingPort.dhcpStart;
+      if (editingPort.dhcpEnd !== null && editingPort.dhcpEnd !== undefined) updateData.dhcpEnd = editingPort.dhcpEnd;
+      if (editingPort.dhcpTime !== null && editingPort.dhcpTime !== undefined) updateData.dhcpTime = editingPort.dhcpTime;
+      if (editingPort.enabled !== null && editingPort.enabled !== undefined) updateData.enabled = editingPort.enabled;
       console.log('[handleSavePort] calling updatePort.mutate with:', updateData);
       updatePort.mutate(updateData);
     } else {
