@@ -230,10 +230,18 @@ export function PortConfigTabNew() {
 
   return (
     <div className="space-y-6">
-      {/* 物理端口展示区 */}
+      {/* 物理网口展示区 */}
       <div className="bg-gray-50 p-6 rounded-lg border">
         <h3 className="text-lg font-semibold mb-4">物理网口</h3>
-        <div className="flex gap-4">
+        {/* 使用Grid布局确保与下方toggle switch对齐 */}
+        <div className="grid" style={{
+          gridTemplateColumns: `80px repeat(${physicalInterfaces?.length || 0}, 110px)`,
+          gap: '16px'
+        }}>
+          {/* 空白占位，对齐接口名称列 */}
+          <div></div>
+          
+          {/* 物理网口卡片 */}
           {physicalInterfaces && physicalInterfaces.length > 0 ? (
             physicalInterfaces.map((iface) => (
               <PhysicalPortCard
@@ -269,14 +277,19 @@ export function PortConfigTabNew() {
         {wanPorts.length > 0 ? (
           <div className="space-y-2">
             {wanPorts.map((port) => (
-              <div key={port.id} className="flex items-center gap-2">
-                {/* 接口名称标签 */}
-                <div className="min-w-[80px] font-semibold text-gray-900">
-                  {port.name}
-                </div>
-                
-                {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
-                <div className="flex gap-4 flex-1">
+              <div key={port.id}>
+                {/* 使用Grid布局与物理网口卡片对齐 */}
+                <div className="grid" style={{
+                  gridTemplateColumns: `80px repeat(${physicalInterfaces?.length || 0}, 110px)`,
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                  {/* 接口名称标签 */}
+                  <div className="font-semibold text-gray-900">
+                    {port.name}
+                  </div>
+                  
+                  {/* 物理接口toggle switch */}
                   {physicalInterfaces?.map((iface) => {
                     // 支持多选:检查ifname中是否包含该接口
                     const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
@@ -286,7 +299,7 @@ export function PortConfigTabNew() {
                     return (
                       <div
                         key={iface.name}
-                        className="flex items-center justify-center min-w-[110px]"
+                        className="flex items-center justify-center"
                       >
                         <Switch
                           checked={isChecked}
@@ -340,14 +353,19 @@ export function PortConfigTabNew() {
         {lanPorts.length > 0 ? (
           <div className="space-y-2">
             {lanPorts.map((port) => (
-              <div key={port.id} className="flex items-center gap-2">
-                {/* 接口名称标签 */}
-                <div className="min-w-[80px] font-semibold text-gray-900">
-                  {port.name}
-                </div>
-                
-                {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
-                <div className="flex gap-4 flex-1">
+              <div key={port.id}>
+                {/* 使用Grid布局与物理网口卡片对齐 */}
+                <div className="grid" style={{
+                  gridTemplateColumns: `80px repeat(${physicalInterfaces?.length || 0}, 110px)`,
+                  gap: '16px',
+                  alignItems: 'center'
+                }}>
+                  {/* 接口名称标签 */}
+                  <div className="font-semibold text-gray-900">
+                    {port.name}
+                  </div>
+                  
+                  {/* 物理接口toggle switch */}
                   {physicalInterfaces?.map((iface) => {
                     // 支持多选:检查ifname中是否包含该接口
                     const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
@@ -357,7 +375,7 @@ export function PortConfigTabNew() {
                     return (
                       <div
                         key={iface.name}
-                        className="flex items-center justify-center min-w-[110px]"
+                        className="flex items-center justify-center"
                       >
                         <Switch
                           checked={isChecked}

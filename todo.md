@@ -2162,3 +2162,21 @@
   - [x] 添加未连接网口的最大速率获取(从"Supported link modes"解析)
   - [x] 添加fallback逻辑(从/sys/class/net/读取)
 - [x] 测试功能(沙箱环境限制,需在物理硬件验证)
+
+
+## 物理网口图标与toggle switch严格对齐 ✅
+
+### 问题
+物理网口图标与下方toggle switch没有严格对齐,例如eth0图标对应的开关位于eth0和eth1之间,需要修正使每个图标与对应开关严格居中对齐。
+
+### 任务
+- [x] 分析当前布局问题
+  - [x] 检查物理网口展示区的布局代码(flex gap-4)
+  - [x] 检查WAN/LAN行的toggle switch布局代码(flex gap-4)
+  - [x] 找出对齐偏差的原因(接口名称列占用80px导致偏移)
+- [x] 修复对齐逻辑
+  - [x] 使用CSS Grid布局替代Flex布局
+  - [x] 设置gridTemplateColumns: 80px + repeat(N, 110px)
+  - [x] 设置gap: 16px保持一致
+  - [x] 为物理网口区添加空白占位对齐接口名称列
+- [x] 测试功能
