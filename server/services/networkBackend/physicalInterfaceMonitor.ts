@@ -132,7 +132,12 @@ export class PhysicalInterfaceMonitor {
       if (speed === 'unknown' && !carrier) {
         try {
           const { stdout: ethtoolOutput } = await execAsync(`ethtool ${ifname} 2>/dev/null`);
-          // 查找 "Supported link modes" 中的最大速率
+          // 查找 "Supported link modes" 中的所有速率
+          // 支持多行格式,例如:
+          // Supported link modes:   10baseT/Half 10baseT/Full
+          //                         100baseT/Half 100baseT/Full
+          //                         1000baseT/Full
+          //                         2500baseT/Full
           const supportedMatch = ethtoolOutput.match(/(\d+)(base|BASE)(T|TX|T4|SX|LX)\/(Full|Half)/g);
           if (supportedMatch && supportedMatch.length > 0) {
             // 提取所有支持的速率
@@ -140,6 +145,7 @@ export class PhysicalInterfaceMonitor {
               const match = m.match(/(\d+)/);
               return match ? parseInt(match[1]) : 0;
             });
+            // 使用最大支持速率(最后一个通常是最大的)
             const maxSpeed = Math.max(...speeds);
             if (maxSpeed >= 1000) {
               speed = `${maxSpeed / 1000} Gbps`;
@@ -148,7 +154,7 @@ export class PhysicalInterfaceMonitor {
             }
           }
         } catch (e) {
-          // 忽略
+          console.error(`Failed to get max supported speed for ${ifname}:`, e);
         }
       }
       

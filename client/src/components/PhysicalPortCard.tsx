@@ -60,13 +60,13 @@ export function PhysicalPortCard({
         />
       </div>
       
-      {/* 速率显示 */}
-      <div className="text-sm font-semibold text-gray-900">
+      {/* 速率显示 - 已连接:黑色加粗 | 未连接:灰色加粗 */}
+      <div className={`text-sm font-bold ${linkStatus ? 'text-gray-900' : 'text-gray-400'}`}>
         {displaySpeed}
       </div>
       
-      {/* 接口名称 */}
-      <div className="text-xs text-gray-600 mt-0.5">
+      {/* 接口名称 - 已连接:黑色加粗 | 未连接:灰色加粗 */}
+      <div className={`text-xs font-bold mt-0.5 ${linkStatus ? 'text-gray-900' : 'text-gray-400'}`}>
         {name}
       </div>
           </div>
