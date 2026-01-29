@@ -755,34 +755,31 @@ function PortConfigTab() {
 
                 <div className="space-y-2">
                   <Label>防火墙区域</Label>
-                  <div className="flex flex-wrap gap-4">
-                    {(firewallZones || ["wan", "lan", "guest", "dmz"]).map((zone) => {
-                      const currentZones = editingPort.firewallZone ? editingPort.firewallZone.split(",").map((z: string) => z.trim()) : [];
-                      const isChecked = currentZones.includes(zone);
-                      return (
-                        <div key={zone} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`zone-${zone}`}
-                            checked={isChecked}
-                            onChange={(e) => {
-                              let newZones: string[];
-                              if (e.target.checked) {
-                                newZones = [...currentZones, zone];
-                              } else {
-                                newZones = currentZones.filter((z: string) => z !== zone);
-                              }
-                              setEditingPort({ ...editingPort, firewallZone: newZones.join(",") });
-                            }}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <label htmlFor={`zone-${zone}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            {zone.toUpperCase()}
-                          </label>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <Select
+                    value={editingPort.firewallZone || ""}
+                    onValueChange={(value) => {
+                      setEditingPort({ ...editingPort, firewallZone: value });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择防火墙区域" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(firewallZones || ["wan", "lan", "guest", "dmz"]).map((zone) => (
+                        <SelectItem key={zone} value={zone}>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{zone.toUpperCase()}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {zone === "wan" && "(外网接口)"}
+                              {zone === "lan" && "(内网接口)"}
+                              {zone === "guest" && "(访客网络)"}
+                              {zone === "dmz" && "(DMZ区)"}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -923,6 +920,7 @@ function PortConfigTab() {
 // ==================== 接口配置标签页 ====================
 function InterfaceConfigTab() {
   const { data: ports, isLoading } = trpc.networkConfig.listPorts.useQuery();
+  const { data: firewallZones } = trpc.firewall.listFirewalldZones.useQuery();
   const [editingInterface, setEditingInterface] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -1216,6 +1214,35 @@ function InterfaceConfigTab() {
                 <p className="text-sm text-muted-foreground">
                   多个DNS服务器用空格分隔
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>防火墙区域</Label>
+                <Select
+                  value={editingInterface.firewallZone || ""}
+                  onValueChange={(value) => {
+                    setEditingInterface({ ...editingInterface, firewallZone: value });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择防火墙区域" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(firewallZones || ["wan", "lan", "guest", "dmz"]).map((zone) => (
+                      <SelectItem key={zone} value={zone}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{zone.toUpperCase()}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {zone === "wan" && "(外网接口)"}
+                            {zone === "lan" && "(内网接口)"}
+                            {zone === "guest" && "(访客网络)"}
+                            {zone === "dmz" && "(DMZ区)"}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-4 border-t pt-4">
