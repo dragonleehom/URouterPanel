@@ -251,6 +251,11 @@ export function PortConfigTabNew() {
           <div className="space-y-2">
             {wanPorts.map((port) => (
               <div key={port.id} className="flex items-center gap-2">
+                {/* 接口名称标签 */}
+                <div className="min-w-[80px] font-semibold text-gray-900">
+                  {port.name}
+                </div>
+                
                 {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
@@ -315,6 +320,11 @@ export function PortConfigTabNew() {
           <div className="space-y-2">
             {lanPorts.map((port) => (
               <div key={port.id} className="flex items-center gap-2">
+                {/* 接口名称标签 */}
+                <div className="min-w-[80px] font-semibold text-gray-900">
+                  {port.name}
+                </div>
+                
                 {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
