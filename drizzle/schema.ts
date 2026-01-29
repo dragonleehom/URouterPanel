@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -233,6 +233,9 @@ export const networkPorts = mysqlTable("network_ports", {
   pppoePassword: varchar("pppoePassword", { length: 100 }), // PPPoE密码
   pppoeServiceName: varchar("pppoeServiceName", { length: 100 }), // PPPoE服务名称
   enabled: int("enabled").default(1), // 启用状态
+  // 配置版本管理字段
+  savedAt: timestamp("savedAt").defaultNow().notNull(), // 最后保存时间
+  appliedAt: timestamp("appliedAt"), // 最后应用时间(null表示从未应用)
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -289,3 +292,19 @@ export const staticRoutes = mysqlTable("static_routes", {
 
 export type StaticRoute = typeof staticRoutes.$inferSelect;
 export type InsertStaticRoute = typeof staticRoutes.$inferInsert;
+
+/**
+ * 配置快照表
+ * 用于配置版本管理,支持"复位"功能
+ */
+export const configSnapshots = mysqlTable("config_snapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  configType: varchar("configType", { length: 50 }).notNull(), // 配置类型(network_port, firewall_rule等)
+  configId: int("configId").notNull(), // 关联的配置ID
+  snapshotData: json("snapshotData").notNull(), // 配置快照(完整配置的JSON)
+  createdAt: timestamp("createdAt").defaultNow().notNull(), // 快照创建时间
+  appliedAt: timestamp("appliedAt"), // 该快照被应用的时间(用于查找最后应用的快照)
+});
+
+export type ConfigSnapshot = typeof configSnapshots.$inferSelect;
+export type InsertConfigSnapshot = typeof configSnapshots.$inferInsert;

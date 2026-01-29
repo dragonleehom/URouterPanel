@@ -109,10 +109,18 @@ export function PortConfigTabNew() {
     return null;
   };
 
-  // 检查物理接口是否可用于当前编辑的端口
-  const isPhysicalPortAvailable = (ifname: string, currentPortId?: number): boolean => {
-    const owner = getPhysicalPortOwner(ifname);
-    return owner === null || owner === currentPortId;
+  // 检查物理接口是否可用于当前端口
+  // 只检查对方类型(WAN/LAN)的接口,同类型接口可以共享物理端口
+  const isPhysicalPortAvailable = (ifname: string, currentPortId: number, currentPortType: 'wan' | 'lan'): boolean => {
+    if (!logicalPorts) return true;
+    
+    // 查找使用该物理接口的对方类型的端口
+    const oppositeType = currentPortType === 'wan' ? 'lan' : 'wan';
+    const conflictPort = logicalPorts.find(
+      port => port.type === oppositeType && port.ifname === ifname
+    );
+    
+    return !conflictPort; // 如果没有对方类型的端口使用该接口,则可用
   };
 
   // 切换物理接口的分配
@@ -247,7 +255,7 @@ export function PortConfigTabNew() {
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
                     const isChecked = port.ifname === iface.name;
-                    const isDisabled = !isPhysicalPortAvailable(iface.name, port.id);
+                    const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
                       <div
@@ -311,7 +319,7 @@ export function PortConfigTabNew() {
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
                     const isChecked = port.ifname === iface.name;
-                    const isDisabled = !isPhysicalPortAvailable(iface.name, port.id);
+                    const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
                       <div

@@ -216,4 +216,75 @@ export const networkConfigRouter = router({
       type: await networkConfigManager.getBackendType(),
     };
   }),
+  
+  // ==================== 配置版本管理 ====================
+  
+  /**
+   * 保存并应用网口配置
+   * 保存到数据库,应用到系统,重启服务
+   */
+  saveAndApplyPort: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const { restartRelatedServices, createSnapshot } = await import('./services/configVersionService');
+      
+      // 1. 获取当前配置
+      const port = await networkConfigService.getNetworkPort(input.id);
+      if (!port) {
+        throw new Error('配置不存在');
+      }
+      
+      // 2. 创建快照
+      await createSnapshot('network_port', input.id, port);
+      
+      // 3. 应用配置到系统
+      await networkConfigService.applyNetworkPort(port);
+      
+      // 4. 重启服务
+      const restartResult = await restartRelatedServices('network_port');
+      
+      return {
+        success: restartResult.success,
+        message: restartResult.message,
+        details: restartResult.details,
+      };
+    }),
+  
+  /**
+   * 复位网口配置到最后应用的版本
+   */
+  resetPort: publicProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const { getLastAppliedSnapshot, restartRelatedServices } = await import('./services/configVersionService');
+      
+      // 1. 获取最后应用的快照
+      const snapshot = await getLastAppliedSnapshot('network_port', input.id);
+      if (!snapshot) {
+        throw new Error('没有可用的快照,无法复位');
+      }
+      
+      // 2. 从快照恢复配置
+      const restoredConfig = snapshot.snapshotData as any;
+      await networkConfigService.updateNetworkPort(input.id, restoredConfig);
+      
+      // 3. 重新获取更新后的配置
+      const updatedPort = await networkConfigService.getNetworkPort(input.id);
+      if (!updatedPort) {
+        throw new Error('配置不存在');
+      }
+      
+      // 4. 应用配置到系统
+      await networkConfigService.applyNetworkPort(updatedPort);
+      
+      // 4. 重启服务
+      const restartResult = await restartRelatedServices('network_port');
+      
+      return {
+        success: restartResult.success,
+        message: restartResult.message,
+        restoredConfig,
+        details: restartResult.details,
+      };
+    }),
 });
