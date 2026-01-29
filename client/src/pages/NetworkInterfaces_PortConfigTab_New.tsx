@@ -116,24 +116,39 @@ export function PortConfigTabNew() {
     
     // 查找使用该物理接口的对方类型的端口
     const oppositeType = currentPortType === 'wan' ? 'lan' : 'wan';
-    const conflictPort = logicalPorts.find(
-      port => port.type === oppositeType && port.ifname === ifname
-    );
+    const conflictPort = logicalPorts.find(port => {
+      if (port.type !== oppositeType) return false;
+      
+      // 检查该端口的物理接口列表中是否包含ifname
+      const interfaces = port.ifname ? port.ifname.split(',').map(s => s.trim()) : [];
+      return interfaces.includes(ifname);
+    });
     
     return !conflictPort; // 如果没有对方类型的端口使用该接口,则可用
   };
 
-  // 切换物理接口的分配
+  // 切换物理接口的分配(支持多选)
   const togglePhysicalInterface = (portId: number, ifname: string) => {
     const port = logicalPorts?.find(p => p.id === portId);
     if (!port) return;
 
-    const currentIfname = port.ifname || '';
-    const newIfname = currentIfname === ifname ? '' : ifname;
-
+    // 解析当前的物理接口列表(逗号分隔)
+    const currentInterfaces = port.ifname ? port.ifname.split(',').map(s => s.trim()).filter(s => s) : [];
+    
+    // 切换选中状态
+    let newInterfaces: string[];
+    if (currentInterfaces.includes(ifname)) {
+      // 已选中,移除
+      newInterfaces = currentInterfaces.filter(i => i !== ifname);
+    } else {
+      // 未选中,添加
+      newInterfaces = [...currentInterfaces, ifname];
+    }
+    
+    // 更新端口配置
     updatePort.mutate({
       id: portId,
-      ifname: newIfname,
+      ifname: newInterfaces.join(','),
     });
   };
 
@@ -218,7 +233,7 @@ export function PortConfigTabNew() {
       {/* 物理端口展示区 */}
       <div className="bg-gray-50 p-6 rounded-lg border">
         <h3 className="text-lg font-semibold mb-4">物理网口</h3>
-        <div className="flex flex-wrap gap-4">
+        <div className="flex gap-4">
           {physicalInterfaces && physicalInterfaces.length > 0 ? (
             physicalInterfaces.map((iface) => (
               <PhysicalPortCard
@@ -259,7 +274,9 @@ export function PortConfigTabNew() {
                 {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
-                    const isChecked = port.ifname === iface.name;
+                    // 支持多选:检查ifname中是否包含该接口
+                    const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
+                    const isChecked = currentInterfaces.includes(iface.name);
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
@@ -328,7 +345,9 @@ export function PortConfigTabNew() {
                 {/* 物理接口toggle switch - 与物理端口方框居中对齐 */}
                 <div className="flex gap-4 flex-1">
                   {physicalInterfaces?.map((iface) => {
-                    const isChecked = port.ifname === iface.name;
+                    // 支持多选:检查ifname中是否包含该接口
+                    const currentInterfaces = port.ifname ? port.ifname.split(',').map((s: string) => s.trim()) : [];
+                    const isChecked = currentInterfaces.includes(iface.name);
                     const isDisabled = !isPhysicalPortAvailable(iface.name, port.id, port.type);
                     
                     return (
@@ -513,7 +532,7 @@ export function PortConfigTabNew() {
               {/* 防火墙区域 */}
               <div className="space-y-2">
                 <Label>防火墙区域</Label>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex gap-4">
                   {(firewallZones || ['wan', 'lan', 'guest', 'dmz']).map((zone) => {
                     const currentZones = editingPort.firewallZone ? editingPort.firewallZone.split(',').map(z => z.trim()) : [];
                     const isChecked = currentZones.includes(zone);

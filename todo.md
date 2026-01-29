@@ -2103,3 +2103,26 @@
   - [x] 显示接口名称(port.name)
   - [x] 调整布局确保对齐
 - [x] 测试功能
+
+
+## UI对齐和逻辑修复 ✅
+
+### 问题
+1. 物理网口方框与toggle switch未居中对齐
+2. 互斥逻辑错误:应支持一个WAN/LAN接口绑定多个物理端口
+3. LAN配置未显示:系统有LAN配置但界面未显示
+
+### 任务
+- [x] 修复物理网口与toggle switch对齐
+  - [x] 调整布局确保每个网口与下方开关一一对应
+  - [x] 使用相同的宽度和间距(gap-4)
+- [x] 修复多端口绑定逻辑
+  - [x] 修改togglePhysicalInterface支持多选(逗号分隔)
+  - [x] 更新ifname字段为逗号分隔的列表
+  - [x] 修复isPhysicalPortAvailable逻辑(检查split后的数组)
+  - [x] 修复isChecked逻辑(检查includes)
+- [x] 排查LAN配置同步问题
+  - [x] 检查syncSystemConfig是否正确读取LAN配置(确认正常)
+  - [x] 检查数据库中的LAN配置(确认存在LAN_TEST)
+  - [x] 检查前端是否正确渲染LAN配置(日志显示正常加载)
+- [x] 测试功能
