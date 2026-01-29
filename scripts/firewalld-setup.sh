@@ -66,7 +66,17 @@ fi
 firewall-cmd --permanent --zone=wan --set-target=DROP
 firewall-cmd --permanent --zone=wan --add-masquerade
 firewall-cmd --permanent --zone=wan --set-description="WAN zone for internet-facing interfaces"
+
+# ⚠️ 测试环境配置: 允许SSH和HTTP访问
+# 生产环境部署时,请移除以下规则以增强安全性
+echo "  ⚠️  添加测试环境端口允许规则 (SSH/HTTP/HTTPS)..."
+firewall-cmd --permanent --zone=wan --add-service=ssh
+firewall-cmd --permanent --zone=wan --add-service=http
+firewall-cmd --permanent --zone=wan --add-service=https
+firewall-cmd --permanent --zone=wan --add-port=3000/tcp  # 开发服务器端口
+
 echo "  ✓ WAN区域策略已配置 (target=DROP, masquerade=enabled)"
+echo "  ⚠️  测试模式: SSH(22), HTTP(80), HTTPS(443), Dev(3000) 已开放"
 
 # 创建LAN区域(参考OpenWrt lan区域)
 echo "创建LAN区域..."
@@ -134,6 +144,7 @@ echo ""
 echo "WAN区域:"
 echo "  - 默认策略: DROP (拒绝所有未明确允许的流量)"
 echo "  - NAT伪装: 已启用"
+echo "  - ⚠️  测试模式: SSH(22), HTTP(80), HTTPS(443), Dev(3000) 已开放"
 echo "  - 用途: 连接到互联网的接口"
 echo ""
 echo "LAN区域:"
