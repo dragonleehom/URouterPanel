@@ -75,15 +75,33 @@ export class PhysicalInterfaceMonitor {
       try {
         const { stdout: ethtoolOutput } = await execAsync(`ethtool ${ifname} 2>/dev/null`);
         
-        // 解析速率
-        const speedMatch = ethtoolOutput.match(/Speed:\s+(\d+)(Mb|Gb)\/s/i);
+        // 解析速率 - 支持多种格式
+        // 格式1: "Speed: 1000Mb/s" 或 "Speed: 10Gb/s"
+        // 格式2: "Speed: 1000 Mb/s" (带空格)
+        // 格式3: "Speed: Unknown!"
+        const speedMatch = ethtoolOutput.match(/Speed:\s+(\d+)\s?(Mb|Gb)\/s/i);
         if (speedMatch) {
           const value = parseInt(speedMatch[1]);
           const unit = speedMatch[2].toLowerCase();
           if (unit === 'gb') {
-            speed = value >= 10 ? `${value} Gbps` : `${value} Gbps`;
+            speed = `${value} Gbps`;
           } else {
             speed = `${value} Mbps`;
+          }
+        } else if (ethtoolOutput.includes('Speed: Unknown')) {
+          // 如果速率未知,尝试从/sys读取
+          try {
+            const sysSpeed = await fs.readFile(`/sys/class/net/${ifname}/speed`, 'utf-8');
+            const speedValue = parseInt(sysSpeed.trim());
+            if (speedValue > 0) {
+              if (speedValue >= 1000) {
+                speed = `${speedValue / 1000} Gbps`;
+              } else {
+                speed = `${speedValue} Mbps`;
+              }
+            }
+          } catch (e) {
+            // /sys/class/net/读取失败,保持unknown
           }
         }
         
@@ -93,7 +111,45 @@ export class PhysicalInterfaceMonitor {
           duplex = duplexMatch[1].toLowerCase() as 'full' | 'half';
         }
       } catch (error) {
-        // ethtool可能失败,使用默认值
+        console.error(`Failed to get ethtool info for ${ifname}:`, error);
+        // ethtool失败,尝试从/sys读取速率
+        try {
+          const sysSpeed = await fs.readFile(`/sys/class/net/${ifname}/speed`, 'utf-8');
+          const speedValue = parseInt(sysSpeed.trim());
+          if (speedValue > 0) {
+            if (speedValue >= 1000) {
+              speed = `${speedValue / 1000} Gbps`;
+            } else {
+              speed = `${speedValue} Mbps`;
+            }
+          }
+        } catch (e) {
+          // 所有方法失败,保持unknown
+        }
+      }
+      
+      // 如果速率仍然未知且网口未连接,尝试获取最大支持速率
+      if (speed === 'unknown' && !carrier) {
+        try {
+          const { stdout: ethtoolOutput } = await execAsync(`ethtool ${ifname} 2>/dev/null`);
+          // 查找 "Supported link modes" 中的最大速率
+          const supportedMatch = ethtoolOutput.match(/(\d+)(base|BASE)(T|TX|T4|SX|LX)\/(Full|Half)/g);
+          if (supportedMatch && supportedMatch.length > 0) {
+            // 提取所有支持的速率
+            const speeds = supportedMatch.map(m => {
+              const match = m.match(/(\d+)/);
+              return match ? parseInt(match[1]) : 0;
+            });
+            const maxSpeed = Math.max(...speeds);
+            if (maxSpeed >= 1000) {
+              speed = `${maxSpeed / 1000} Gbps`;
+            } else {
+              speed = `${maxSpeed} Mbps`;
+            }
+          }
+        } catch (e) {
+          // 忽略
+        }
       }
       
       // 获取驱动信息
