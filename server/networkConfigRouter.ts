@@ -82,6 +82,23 @@ export const networkConfigRouter = router({
       dhcpEnd: z.string().optional(),
       dhcpTime: z.string().optional(),
       enabled: z.number().optional(),
+      // 新增字段
+      autoStart: z.number().optional(),
+      dhcpHostname: z.string().optional(),
+      dhcpBroadcast: z.number().optional(),
+      dhcpClientId: z.string().optional(),
+      dhcpVendorClass: z.string().optional(),
+      useDefaultGateway: z.number().optional(),
+      useCustomDns: z.number().optional(),
+      dnsServers: z.string().optional(),
+      peerdns: z.number().optional(),
+      ipv6Delegation: z.number().optional(),
+      ipv6Assignment: z.string().optional(),
+      ipv6Suffix: z.string().optional(),
+      ipv6PrefixFilter: z.string().optional(),
+      ipv4RoutingTable: z.string().optional(),
+      ipv6RoutingTable: z.string().optional(),
+      ignoreDhcpServer: z.number().optional(),
     }))
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;

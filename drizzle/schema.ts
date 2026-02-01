@@ -233,6 +233,27 @@ export const networkPorts = mysqlTable("network_ports", {
   pppoePassword: varchar("pppoePassword", { length: 100 }), // PPPoE密码
   pppoeServiceName: varchar("pppoeServiceName", { length: 100 }), // PPPoE服务名称
   enabled: int("enabled").default(1), // 启用状态
+  autoStart: int("autoStart").default(1), // 开机自动运行 0=disabled, 1=enabled
+  // DHCP客户端高级选项
+  dhcpHostname: varchar("dhcpHostname", { length: 100 }), // 请求DHCP时发送的主机名
+  dhcpBroadcast: int("dhcpBroadcast").default(0), // 使用广播标志 0=disabled, 1=enabled
+  dhcpClientId: varchar("dhcpClientId", { length: 100 }), // 覆盖DHCP客户端标识符ID
+  dhcpVendorClass: varchar("dhcpVendorClass", { length: 100 }), // 覆盖DHCP对接收到的包括配置
+  // 路由和DNS配置
+  useDefaultGateway: int("useDefaultGateway").default(1), // 使用默认网关 0=disabled, 1=enabled
+  useCustomDns: int("useCustomDns").default(0), // 自定义DNS 0=auto, 1=custom
+  dnsServers: text("dnsServers"), // DNS服务器列表(JSON数组)
+  peerdns: int("peerdns").default(1), // 使用对端的DNS 0=disabled, 1=enabled
+  // IPv6配置
+  ipv6Delegation: int("ipv6Delegation").default(1), // 委托IPv6前缀 0=disabled, 1=enabled
+  ipv6Assignment: varchar("ipv6Assignment", { length: 20 }).default("60"), // IPv6分配长度
+  ipv6Suffix: varchar("ipv6Suffix", { length: 50 }), // IPv6后缀
+  ipv6PrefixFilter: varchar("ipv6PrefixFilter", { length: 50 }), // IPv6前缀过滤器
+  // 路由表覆盖
+  ipv4RoutingTable: varchar("ipv4RoutingTable", { length: 50 }), // 覆盖IPv4路由表
+  ipv6RoutingTable: varchar("ipv6RoutingTable", { length: 50 }), // 覆盖IPv6路由表
+  // DHCP服务器配置
+  ignoreDhcpServer: int("ignoreDhcpServer").default(0), // 忽略此接口(不提供DHCP服务) 0=provide, 1=ignore
   // 配置版本管理字段
   savedAt: timestamp("savedAt").defaultNow().notNull(), // 最后保存时间
   appliedAt: timestamp("appliedAt"), // 最后应用时间(null表示从未应用)

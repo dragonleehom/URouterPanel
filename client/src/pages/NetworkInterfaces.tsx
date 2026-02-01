@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PortConfigTabNew } from "./NetworkInterfaces_PortConfigTab_New";
+import { InterfaceConfigDialog } from "@/components/InterfaceConfigDialog";
 
 // ==================== 全局配置标签页 ====================
 function GlobalConfigTab() {
@@ -1118,214 +1119,15 @@ function InterfaceConfigTab() {
       </Card>
 
       {/* 编辑对话框 */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>接口配置 - {editingInterface?.name}</DialogTitle>
-            <DialogDescription>
-              配置接口的协议参数
-            </DialogDescription>
-          </DialogHeader>
-
-          {editingInterface && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="interface-protocol">协议类型</Label>
-                <select
-                  id="interface-protocol"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={editingInterface.protocol}
-                  onChange={(e) =>
-                    setEditingInterface({
-                      ...editingInterface,
-                      protocol: e.target.value,
-                    })
-                  }
-                >
-                  <option value="static">静态IP</option>
-                  <option value="dhcp">DHCP</option>
-                  <option value="pppoe">PPPoE</option>
-                </select>
-              </div>
-
-              {editingInterface.protocol === "static" && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="interface-ipaddr">IPv4地址</Label>
-                      <Input
-                        id="interface-ipaddr"
-                        value={editingInterface.ipaddr || ""}
-                        onChange={(e) =>
-                          setEditingInterface({
-                            ...editingInterface,
-                            ipaddr: e.target.value,
-                          })
-                        }
-                        placeholder="192.168.1.1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="interface-netmask">子网掩码</Label>
-                      <Input
-                        id="interface-netmask"
-                        value={editingInterface.netmask || ""}
-                        onChange={(e) =>
-                          setEditingInterface({
-                            ...editingInterface,
-                            netmask: e.target.value,
-                          })
-                        }
-                        placeholder="255.255.255.0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="interface-gateway">网关</Label>
-                    <Input
-                      id="interface-gateway"
-                      value={editingInterface.gateway || ""}
-                      onChange={(e) =>
-                        setEditingInterface({
-                          ...editingInterface,
-                          gateway: e.target.value,
-                        })
-                      }
-                      placeholder="192.168.1.254"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="interface-dns">DNS服务器</Label>
-                <Input
-                  id="interface-dns"
-                  value={editingInterface.dns || ""}
-                  onChange={(e) =>
-                    setEditingInterface({
-                      ...editingInterface,
-                      dns: e.target.value,
-                    })
-                  }
-                  placeholder="8.8.8.8 8.8.4.4"
-                />
-                <p className="text-sm text-muted-foreground">
-                  多个DNS服务器用空格分隔
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>防火墙区域</Label>
-                <Select
-                  value={editingInterface.firewallZone || ""}
-                  onValueChange={(value) => {
-                    setEditingInterface({ ...editingInterface, firewallZone: value });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择防火墙区域" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(firewallZones || ["wan", "lan", "guest", "dmz"]).map((zone) => (
-                      <SelectItem key={zone} value={zone}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{zone.toUpperCase()}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {zone === "wan" && "(外网接口)"}
-                            {zone === "lan" && "(内网接口)"}
-                            {zone === "guest" && "(访客网络)"}
-                            {zone === "dmz" && "(DMZ区)"}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4 border-t pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>启用IPv6</Label>
-                    <p className="text-sm text-muted-foreground">
-                      允许此接口使用IPv6
-                    </p>
-                  </div>
-                  <Switch
-                    checked={editingInterface.ipv6 === 1}
-                    onCheckedChange={(checked) =>
-                      setEditingInterface({
-                        ...editingInterface,
-                        ipv6: checked ? 1 : 0,
-                      })
-                    }
-                  />
-                </div>
-
-                {editingInterface.ipv6 === 1 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="interface-ipv6addr">IPv6地址</Label>
-                      <Input
-                        id="interface-ipv6addr"
-                        value={editingInterface.ipv6addr || ""}
-                        onChange={(e) =>
-                          setEditingInterface({
-                            ...editingInterface,
-                            ipv6addr: e.target.value,
-                          })
-                        }
-                        placeholder="2001:db8::1/64"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="interface-ipv6gateway">IPv6网关</Label>
-                      <Input
-                        id="interface-ipv6gateway"
-                        value={editingInterface.ipv6gateway || ""}
-                        onChange={(e) =>
-                          setEditingInterface({
-                            ...editingInterface,
-                            ipv6gateway: e.target.value,
-                          })
-                        }
-                        placeholder="2001:db8::254"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between border-t pt-4">
-                <Label>启用此接口</Label>
-                <Switch
-                  checked={editingInterface.enabled === 1}
-                  onCheckedChange={(checked) =>
-                    setEditingInterface({
-                      ...editingInterface,
-                      enabled: checked ? 1 : 0,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleSaveInterface} disabled={updatePort.isPending}>
-              {updatePort.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              保存
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <InterfaceConfigDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        interface={editingInterface}
+        onInterfaceChange={setEditingInterface}
+        onSave={handleSaveInterface}
+        isSaving={updatePort.isPending}
+        firewallZones={firewallZones}
+      />
     </div>
   );
 }
