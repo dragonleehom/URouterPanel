@@ -102,8 +102,60 @@ export const networkConfigRouter = router({
     }))
     .mutation(async ({ input }) => {
       const { id, ...updates } = input;
+      
+      // 1. Update database
       await networkConfigService.updateNetworkPort(id, updates);
-      return { success: true };
+      
+      // 2. Get the updated port configuration
+      const port = await networkConfigService.getNetworkPort(id);
+      if (!port) {
+        throw new Error('Port not found');
+      }
+      
+      // 3. Apply configuration to system
+      const { applyInterfaceConfig, validateInterfaceConfig } = await import('./services/networkBackend/interfaceConfigApplier');
+      
+      // Prepare configuration object
+      const config = {
+        interfaceName: port.ifname || port.name,
+        protocol: port.protocol,
+        autoStart: port.autoStart === 1,
+        dhcpHostname: port.dhcpHostname || undefined,
+        useBroadcastFlag: port.dhcpBroadcast === 1,
+        overrideDhcpServerId: port.dhcpVendorClass || undefined,
+        overrideDhcpClientId: port.dhcpClientId || undefined,
+        useDefaultGateway: port.useDefaultGateway === 1,
+        useCustomDns: port.useCustomDns === 1,
+        customDnsServers: port.dnsServers || undefined,
+        delegateIpv6Prefix: port.ipv6Delegation === 1,
+        ipv6AssignmentLength: port.ipv6Assignment ? parseInt(port.ipv6Assignment) : undefined,
+        ipv6PrefixFilter: port.ipv6PrefixFilter || undefined,
+        ipv6Suffix: port.ipv6Suffix || undefined,
+        overrideIpv4RouteTable: port.ipv4RoutingTable || undefined,
+        overrideIpv6RouteTable: port.ipv6RoutingTable || undefined,
+        useGatewayMetric: port.metric !== undefined && port.metric !== null && port.metric > 0,
+        gatewayMetric: port.metric !== null ? port.metric : undefined,
+        dhcpServerEnabled: port.dhcpServer === 1 && port.ignoreDhcpServer !== 1,
+        dhcpStartIp: port.dhcpStart || undefined,
+        dhcpEndIp: port.dhcpEnd || undefined,
+        dhcpLeaseTime: port.dhcpTime || undefined,
+        firewallZone: port.firewallZone || undefined,
+      };
+      
+      // Validate configuration
+      const validation = validateInterfaceConfig(config);
+      if (!validation.valid) {
+        return {
+          success: false,
+          message: '配置验证失败',
+          errors: validation.errors
+        };
+      }
+      
+      // Apply configuration
+      const result = await applyInterfaceConfig(config);
+      
+      return result;
     }),
   
   deletePort: publicProcedure
