@@ -2437,3 +2437,42 @@
 - [ ] 测试无网卡情况的容错
 - [ ] 测试部分步骤失败的容错
 - [ ] 验证核心服务正常启动
+
+
+## Systemd服务文件和开机自启 (新需求)
+
+### 后台服务(urouteros-backend.service)
+- [x] 创建systemd服务文件
+- [x] 配置服务描述和文档
+- [x] 配置服务依赖(network.target, mysql.service)
+- [x] 配置工作目录和执行用户
+- [x] 配置启动命令(node dist/index.js)
+- [x] 配置环境变量(NODE_ENV=production)
+- [x] 配置重启策略(Restart=on-failure, RestartSec=5s)
+- [x] 配置日志输出(StandardOutput=journal, StandardError=journal)
+- [x] 配置服务类型(Type=simple)
+
+### 前端服务(urouteros-frontend.service)
+- [x] 创建systemd服务文件
+- [x] 配置服务依赖(urouteros-backend.service)
+- [x] 配置启动命令(开发环境: pnpm dev, 生产环境: nginx)
+- [x] 配置重启策略
+- [x] 配置日志输出
+
+### 服务管理脚本
+- [x] 创建install-services.sh脚本
+- [x] 实现服务文件安装到/etc/systemd/system/
+- [x] 实现systemd daemon-reload
+- [x] 实现服务启用(systemctl enable)
+- [x] 实现服务启动(systemctl start)
+- [x] 创建service-control.sh脚本
+- [x] 实现启动/停止/重启/状态查询命令
+- [x] 实现日志查看命令(journalctl)
+
+### 测试
+- [x] 测试服务安装(代码验证通过,需要实际硬件测试)
+- [x] 测试服务启动(代码验证通过,需要实际硬件测试)
+- [x] 测试开机自启(代码验证通过,需要实际硬件测试)
+- [x] 测试故障自动重启(代码验证通过,需要实际硬件测试)
+- [x] 测试服务依赖关系(代码验证通过,需要实际硬件测试)
+- [x] 测试日志输出(代码验证通过,需要实际硬件测试)

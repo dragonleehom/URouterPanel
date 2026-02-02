@@ -1,0 +1,27 @@
+[Unit]
+Description=URouterOS Frontend Development Server
+Documentation=https://github.com/dragonleehom/URouterPanel
+After=urouteros-backend.service
+Requires=urouteros-backend.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/urouteros
+Environment="NODE_ENV=development"
+ExecStart=/usr/bin/pnpm dev
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=urouteros-frontend
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
