@@ -329,3 +329,136 @@ export const configSnapshots = mysqlTable("config_snapshots", {
 
 export type ConfigSnapshot = typeof configSnapshots.$inferSelect;
 export type InsertConfigSnapshot = typeof configSnapshots.$inferInsert;
+
+/**
+ * DHCP静态地址分配表
+ * 存储MAC地址与IP地址的静态绑定关系
+ */
+export const dhcpStaticLeases = mysqlTable("dhcp_static_leases", {
+  id: int("id").autoincrement().primaryKey(),
+  networkPortId: int("networkPortId").notNull(), // 关联networkPorts表
+  hostname: varchar("hostname", { length: 100 }), // 主机名(可选)
+  macAddress: varchar("macAddress", { length: 20 }).notNull(), // MAC地址
+  ipAddress: varchar("ipAddress", { length: 50 }).notNull(), // 分配的IP地址
+  description: text("description"), // 描述信息
+  enabled: int("enabled").default(1), // 启用状态
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0), // 是否有未应用的修改
+  lastAppliedAt: timestamp("lastAppliedAt"), // 上次应用时间
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"), // 应用状态
+  applyError: text("applyError"), // 应用失败的错误信息
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DhcpStaticLease = typeof dhcpStaticLeases.$inferSelect;
+export type InsertDhcpStaticLease = typeof dhcpStaticLeases.$inferInsert;
+
+/**
+ * DNS转发器配置表
+ * 存储DNS服务器配置
+ */
+export const dnsForwarders = mysqlTable("dns_forwarders", {
+  id: int("id").autoincrement().primaryKey(),
+  networkPortId: int("networkPortId"), // 关联networkPorts表(可选,null表示全局配置)
+  dnsServer: varchar("dnsServer", { length: 100 }).notNull(), // DNS服务器地址
+  priority: int("priority").default(0), // 优先级(数字越小优先级越高)
+  enabled: int("enabled").default(1), // 启用状态
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0),
+  lastAppliedAt: timestamp("lastAppliedAt"),
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"),
+  applyError: text("applyError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DnsForwarder = typeof dnsForwarders.$inferSelect;
+export type InsertDnsForwarder = typeof dnsForwarders.$inferInsert;
+
+/**
+ * 端口转发规则表
+ * 存储端口转发和DNAT配置
+ */
+export const portForwardingRules = mysqlTable("port_forwarding_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 规则名称
+  protocol: mysqlEnum("protocol", ["tcp", "udp", "both"]).default("tcp").notNull(), // 协议
+  sourceZone: varchar("sourceZone", { length: 50 }).default("wan"), // 源区域
+  externalPort: varchar("externalPort", { length: 50 }).notNull(), // 外部端口(可以是范围,如8080-8090)
+  internalIp: varchar("internalIp", { length: 50 }).notNull(), // 内部IP地址
+  internalPort: varchar("internalPort", { length: 50 }).notNull(), // 内部端口
+  description: text("description"), // 描述信息
+  enabled: int("enabled").default(1), // 启用状态
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0),
+  lastAppliedAt: timestamp("lastAppliedAt"),
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"),
+  applyError: text("applyError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PortForwardingRule = typeof portForwardingRules.$inferSelect;
+export type InsertPortForwardingRule = typeof portForwardingRules.$inferInsert;
+
+/**
+ * 防火墙自定义规则表
+ * 存储用户自定义的防火墙规则
+ */
+export const firewallRules = mysqlTable("firewall_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 规则名称
+  action: mysqlEnum("action", ["accept", "reject", "drop"]).default("accept").notNull(), // 动作
+  protocol: mysqlEnum("protocol", ["tcp", "udp", "icmp", "all"]).default("all"), // 协议
+  sourceZone: varchar("sourceZone", { length: 50 }), // 源区域(可选)
+  sourceIp: varchar("sourceIp", { length: 100 }), // 源IP地址或网段(可选)
+  sourcePort: varchar("sourcePort", { length: 50 }), // 源端口(可选)
+  destZone: varchar("destZone", { length: 50 }), // 目标区域(可选)
+  destIp: varchar("destIp", { length: 100 }), // 目标IP地址或网段(可选)
+  destPort: varchar("destPort", { length: 50 }), // 目标端口(可选)
+  priority: int("priority").default(0), // 优先级(数字越小优先级越高)
+  description: text("description"), // 描述信息
+  enabled: int("enabled").default(1), // 启用状态
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0),
+  lastAppliedAt: timestamp("lastAppliedAt"),
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"),
+  applyError: text("applyError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type FirewallRule = typeof firewallRules.$inferSelect;
+export type InsertFirewallRule = typeof firewallRules.$inferInsert;
+
+/**
+ * QoS流量控制规则表
+ * 存储QoS带宽限制和优先级配置
+ */
+export const qosRules = mysqlTable("qos_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 规则名称
+  interface: varchar("interface", { length: 50 }).notNull(), // 接口名称
+  direction: mysqlEnum("direction", ["upload", "download", "both"]).default("both").notNull(), // 方向
+  maxBandwidth: int("maxBandwidth"), // 最大带宽(Kbps,可选)
+  minBandwidth: int("minBandwidth"), // 最小带宽(Kbps,可选)
+  priority: int("priority").default(0), // 优先级(0-7,数字越小优先级越高)
+  sourceIp: varchar("sourceIp", { length: 100 }), // 源IP地址或网段(可选)
+  destIp: varchar("destIp", { length: 100 }), // 目标IP地址或网段(可选)
+  protocol: mysqlEnum("protocol", ["tcp", "udp", "all"]).default("all"), // 协议
+  sourcePort: varchar("sourcePort", { length: 50 }), // 源端口(可选)
+  destPort: varchar("destPort", { length: 50 }), // 目标端口(可选)
+  description: text("description"), // 描述信息
+  enabled: int("enabled").default(1), // 启用状态
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0),
+  lastAppliedAt: timestamp("lastAppliedAt"),
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"),
+  applyError: text("applyError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QosRule = typeof qosRules.$inferSelect;
+export type InsertQosRule = typeof qosRules.$inferInsert;

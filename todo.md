@@ -2476,3 +2476,167 @@
 - [x] 测试故障自动重启(代码验证通过,需要实际硬件测试)
 - [x] 测试服务依赖关系(代码验证通过,需要实际硬件测试)
 - [x] 测试日志输出(代码验证通过,需要实际硬件测试)
+
+
+## OpenWrt网络管理功能对比和补全 (新需求)
+
+### OpenWrt功能研究
+- [ ] 研究OpenWrt网络接口管理功能
+- [ ] 研究OpenWrt无线网络配置功能
+- [ ] 研究OpenWrt防火墙配置功能
+- [ ] 研究OpenWrt DHCP/DNS服务器功能
+- [ ] 研究OpenWrt静态路由配置功能
+- [ ] 研究OpenWrt QoS流量控制功能
+- [ ] 研究OpenWrt端口转发/NAT功能
+- [ ] 研究OpenWrt VLAN配置功能
+- [ ] 研究OpenWrt网络诊断工具
+
+### 当前系统功能对比
+- [ ] 对比接口配置功能(已实现vs缺失)
+- [ ] 对比无线网络功能(已实现vs缺失)
+- [ ] 对比防火墙功能(已实现vs缺失)
+- [ ] 对比DHCP/DNS功能(已实现vs缺失)
+- [ ] 对比路由功能(已实现vs缺失)
+- [ ] 对比QoS功能(已实现vs缺失)
+- [ ] 对比端口转发功能(已实现vs缺失)
+- [ ] 对比VLAN功能(已实现vs缺失)
+- [ ] 对比网络诊断功能(已实现vs缺失)
+- [ ] 生成功能缺失清单
+
+### 保存/应用/复位机制设计
+- [ ] 设计配置状态管理(pending/saved/applied)
+- [ ] 设计保存按钮(仅保存到数据库)
+- [ ] 设计保存并应用按钮(保存+应用到系统)
+- [ ] 设计复位按钮(放弃未保存修改)
+- [ ] 设计配置diff显示(当前vs已保存)
+- [ ] 设计配置应用进度提示
+- [ ] 设计配置回滚机制(应用失败时)
+
+### 缺失功能实现
+- [ ] 根据功能缺失清单逐个实现
+- [ ] 每个功能包含:前端UI + 后端API + 系统配置应用
+- [ ] 每个功能集成保存/应用/复位机制
+
+
+## Phase 1: 核心路由功能实现 (当前任务)
+
+### 1. 数据库Schema扩展和配置状态管理
+- [ ] 扩展所有配置表添加配置状态字段(pending_changes, last_applied_at, apply_status, apply_error)
+- [ ] 创建DhcpStaticLease表(DHCP静态地址分配)
+- [ ] 创建DnsForwarder表(DNS转发器配置)
+- [ ] 创建StaticRoute表(静态路由配置)
+- [ ] 创建PortForwarding表(端口转发规则)
+- [ ] 创建FirewallRule表(防火墙自定义规则)
+- [ ] 运行pnpm db:push应用数据库变更
+
+### 2. DHCP静态地址分配功能
+- [x] 后端API开发
+  - [x] 实现getDhcpStaticLeases查询接口
+  - [x] 实现addDhcpStaticLease添加接口
+  - [x] 实现updateDhcpStaticLease更新接口
+  - [x] 实现deleteDhcpStaticLease删除接口
+  - [x] 实现applyDhcpStaticLeases应用配置接口
+- [x] 配置应用器开发(dhcpStaticLeaseApplier.ts)
+  - [x] 实现写入dnsmasq配置文件
+  - [x] 实现重启dnsmasq服务
+  - [x] 实现配置验证
+  - [x] 实现错误回滚
+- [x] 前端UI开发
+  - [x] 创建DhcpStaticLeasesDialog组件
+  - [ ] 集成到InterfaceConfigDialog的DHCP Server标签页
+  - [x] 实现静态租约列表展示
+  - [x] 实现添加/编辑/删除功能
+  - [x] 集成保存/应用/复位按钮
+
+### 3. DNS转发器配置功能
+- [ ] 后端API开发
+  - [ ] 实现getDnsForwarders查询接口
+  - [ ] 实现updateDnsForwarders更新接口
+  - [ ] 实现applyDnsForwarders应用配置接口
+- [ ] 配置应用器开发(dnsForwarderApplier.ts)
+  - [ ] 实现写入/etc/resolv.conf
+  - [ ] 实现写入dnsmasq配置
+  - [ ] 实现重启dnsmasq服务
+- [ ] 前端UI开发
+  - [ ] 在InterfaceConfigDialog的Advanced Settings标签页添加DNS转发器配置
+  - [ ] 实现DNS服务器列表编辑
+  - [ ] 实现自定义DNS服务器添加
+  - [ ] 集成保存/应用/复位按钮
+
+### 4. 静态路由配置功能
+- [ ] 后端API开发
+  - [ ] 实现getStaticRoutes查询接口
+  - [ ] 实现addStaticRoute添加接口
+  - [ ] 实现updateStaticRoute更新接口
+  - [ ] 实现deleteStaticRoute删除接口
+  - [ ] 实现applyStaticRoutes应用配置接口
+- [ ] 配置应用器开发(routeConfigApplier.ts)
+  - [ ] 实现ip route add命令执行
+  - [ ] 实现ip route del命令执行
+  - [ ] 实现路由表验证
+  - [ ] 实现配置持久化(/etc/systemd/network/)
+- [ ] 前端UI开发
+  - [ ] 创建StaticRoutesTab组件
+  - [ ] 实现路由列表展示(目标网络/网关/跃点/接口)
+  - [ ] 实现添加路由对话框
+  - [ ] 实现编辑/删除功能
+  - [ ] 支持IPv4和IPv6路由
+  - [ ] 集成保存/应用/复位按钮
+
+### 5. 端口转发/NAT规则功能
+- [ ] 后端API开发
+  - [ ] 实现getPortForwardingRules查询接口
+  - [ ] 实现addPortForwardingRule添加接口
+  - [ ] 实现updatePortForwardingRule更新接口
+  - [ ] 实现deletePortForwardingRule删除接口
+  - [ ] 实现applyPortForwardingRules应用配置接口
+- [ ] 配置应用器开发(portForwardingApplier.ts)
+  - [ ] 实现firewall-cmd --add-forward-port命令
+  - [ ] 实现firewall-cmd --remove-forward-port命令
+  - [ ] 实现DNAT/SNAT规则配置
+  - [ ] 实现配置持久化
+- [ ] 前端UI开发
+  - [ ] 创建PortForwardingTab组件
+  - [ ] 实现端口转发规则列表展示
+  - [ ] 实现添加规则对话框(协议/外部端口/内部IP/内部端口)
+  - [ ] 实现编辑/删除功能
+  - [ ] 支持端口范围配置
+  - [ ] 集成保存/应用/复位按钮
+
+### 6. 保存/应用/复位配置管理机制
+- [ ] 后端通用配置管理服务开发
+  - [ ] 实现saveConfig方法(仅保存到数据库)
+  - [ ] 实现saveAndApplyConfig方法(保存+应用)
+  - [ ] 实现revertConfig方法(恢复到上次应用状态)
+  - [ ] 实现getPendingChanges方法(获取未应用的修改)
+  - [ ] 实现配置快照备份
+  - [ ] 实现自动回滚机制(60秒超时)
+- [ ] 前端配置状态栏组件开发
+  - [ ] 创建ConfigStatusBar组件
+  - [ ] 显示未应用修改数量
+  - [ ] 显示上次应用时间
+  - [ ] 集成到所有配置页面
+- [ ] 前端按钮组件统一
+  - [ ] 创建ConfigActionButtons组件
+  - [ ] 实现Save按钮(仅保存)
+  - [ ] 实现Save & Apply按钮(保存并应用)
+  - [ ] 实现Revert按钮(复位)
+  - [ ] 实现应用进度提示
+  - [ ] 实现错误提示
+
+### 7. 测试和文档更新
+- [ ] 单元测试
+  - [ ] 测试所有后端API接口
+  - [ ] 测试配置应用器
+  - [ ] 测试配置回滚机制
+- [ ] 集成测试
+  - [ ] 测试DHCP静态地址分配完整流程
+  - [ ] 测试DNS转发器配置完整流程
+  - [ ] 测试静态路由配置完整流程
+  - [ ] 测试端口转发配置完整流程
+  - [ ] 测试保存/应用/复位机制
+- [ ] 文档更新
+  - [ ] 更新README添加新功能说明
+  - [ ] 更新API文档
+  - [ ] 创建用户使用指南
+  - [ ] 更新todo.md标记完成项

@@ -10,6 +10,8 @@ import { vmRouter } from "./vmRouter";
 import { firewallRouter } from "./firewallRouter";
 import { networkConfigRouter } from "./networkConfigRouter";
 import { staticRoutesRouter } from "./staticRoutesRouter";
+import { dhcpStaticLeaseRouter } from "./dhcpStaticLeaseRouter";
+import { dnsForwarderRouter } from "./dnsForwarderRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -156,6 +158,12 @@ export const appRouter = router({
   
   // ==================== 静态路由管理路由 ====================
   staticRoutes: staticRoutesRouter,
+
+  // ==================== DHCP静态租约管理路由 ====================
+  dhcpStaticLeases: dhcpStaticLeaseRouter,
+
+  // ==================== DNS转发器管理路由 ====================
+  dnsForwarders: dnsForwarderRouter,
 
   // ==================== 路由管理路由 ====================
   routes: router({
