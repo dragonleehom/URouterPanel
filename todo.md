@@ -2675,3 +2675,51 @@
 - [x] 创建NetworkManagementNew.tsx页面
 - [x] 添加所有功能入口
 - [x] 统一配置管理机制
+
+
+## Phase 2: 前端UI补全 (已完成)
+
+### 1. 防火墙自定义规则前端UI
+- [x] 创建FirewallRulesDialog.tsx组件
+- [x] 实现规则列表展示
+- [x] 实现添加/编辑/删除功能
+- [x] 支持源/目标IP过滤输入
+- [x] 支持端口/协议选择
+- [x] 支持动作选择(ACCEPT/REJECT/DROP)
+- [x] 支持优先级设置
+- [x] 集成保存/应用/复位按钮
+- [x] 集成到网络管理页面
+
+### 2. DNS转发器前端UI
+- [x] 创建DnsForwardersDialog.tsx组件
+- [x] 实现DNS服务器列表展示
+- [x] 实现添加/编辑/删除功能
+- [x] 支持IPv4/IPv6/域名格式验证
+- [x] 支持优先级设置
+- [x] 支持批量导入常用DNS
+- [x] 显示当前系统DNS配置
+- [x] 集成保存/应用/复位按钮
+- [x] 集成到网络管理页面
+
+### 3. 网络诊断工具前端UI
+- [x] 创建NetworkDiagnosticsPanel.tsx组件
+- [x] 实现Ping工具UI
+  - [x] 目标地址输入
+  - [x] 数据包数量/大小设置
+  - [x] 实时输出显示
+- [x] 实现Traceroute工具UI
+  - [x] 目标地址输入
+  - [x] 最大跳数设置
+  - [x] 路由路径可视化
+- [x] 实现Nslookup工具UI
+  - [x] 域名输入
+  - [x] DNS服务器选择
+  - [x] 查询结果展示
+- [x] 集成到网络管理页面
+
+### 4. 集成到网络管理页面
+- [x] 更新NetworkManagementNew.tsx
+- [x] 添加防火墙规则入口
+- [x] 添加DNS转发器入口
+- [x] 添加网络诊断工具入口
+- [x] 统一UI风格和交互逻辑

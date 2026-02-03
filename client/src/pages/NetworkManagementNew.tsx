@@ -19,11 +19,16 @@ import {
 import { DhcpStaticLeasesDialog } from "@/components/DhcpStaticLeasesDialog";
 import { StaticRoutesDialog } from "@/components/StaticRoutesDialog";
 import { PortForwardingDialog } from "@/components/PortForwardingDialog";
+import { FirewallRulesDialog } from "@/components/FirewallRulesDialog";
+import { DnsForwardersDialog } from "@/components/DnsForwardersDialog";
+import { NetworkDiagnosticsPanel } from "@/components/NetworkDiagnosticsPanel";
 
 export default function NetworkManagementNew() {
   const [dhcpDialogOpen, setDhcpDialogOpen] = useState(false);
   const [routesDialogOpen, setRoutesDialogOpen] = useState(false);
   const [portForwardingDialogOpen, setPortForwardingDialogOpen] = useState(false);
+  const [firewallDialogOpen, setFirewallDialogOpen] = useState(false);
+  const [dnsDialogOpen, setDnsDialogOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -53,6 +58,10 @@ export default function NetworkManagementNew() {
           <TabsTrigger value="dhcp">
             <Server className="w-4 h-4 mr-2" />
             DHCP/DNS
+          </TabsTrigger>
+          <TabsTrigger value="diagnostics">
+            <Settings2 className="w-4 h-4 mr-2" />
+            诊断工具
           </TabsTrigger>
         </TabsList>
 
@@ -127,18 +136,17 @@ export default function NetworkManagementNew() {
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="w-5 h-5" />
-                  防火墙规则
+                  防火墙自定义规则
                 </CardTitle>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/firewall">
-                    进入防火墙管理
-                  </Link>
+                <Button onClick={() => setFirewallDialogOpen(true)} size="sm">
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  配置防火墙规则
                 </Button>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                配置防火墙规则、区域和自定义过滤规则
+                配置防火墙过滤规则,控制网络流量的允许/拒绝/丢弃
               </p>
             </CardContent>
           </Card>
@@ -168,21 +176,28 @@ export default function NetworkManagementNew() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Server className="w-5 h-5" />
-                DNS转发器
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="w-5 h-5" />
+                  DNS转发器
+                </CardTitle>
+                <Button onClick={() => setDnsDialogOpen(true)} size="sm">
+                  <Settings2 className="w-4 h-4 mr-2" />
+                  配置DNS转发器
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 配置DNS转发器,指定上游DNS服务器
               </p>
-              <Button variant="outline" size="sm" className="mt-3">
-                <Settings2 className="w-4 h-4 mr-2" />
-                配置DNS转发器
-              </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* 诊断工具 */}
+        <TabsContent value="diagnostics">
+          <NetworkDiagnosticsPanel />
         </TabsContent>
       </Tabs>
 
@@ -199,6 +214,14 @@ export default function NetworkManagementNew() {
       <PortForwardingDialog
         open={portForwardingDialogOpen}
         onOpenChange={setPortForwardingDialogOpen}
+      />
+      <FirewallRulesDialog
+        open={firewallDialogOpen}
+        onOpenChange={setFirewallDialogOpen}
+      />
+      <DnsForwardersDialog
+        open={dnsDialogOpen}
+        onOpenChange={setDnsDialogOpen}
       />
     </div>
   );
