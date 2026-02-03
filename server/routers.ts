@@ -10,8 +10,11 @@ import { vmRouter } from "./vmRouter";
 import { firewallRouter } from "./firewallRouter";
 import { networkConfigRouter } from "./networkConfigRouter";
 import { staticRoutesRouter } from "./staticRoutesRouter";
+import { staticRouteRouter } from "./staticRouteRouter";
 import { dhcpStaticLeaseRouter } from "./dhcpStaticLeaseRouter";
 import { dnsForwarderRouter } from "./dnsForwarderRouter";
+import { portForwardingRouter } from "./portForwardingRouter";
+import { firewallRuleRouter } from "./firewallRuleRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -158,12 +161,19 @@ export const appRouter = router({
   
   // ==================== 静态路由管理路由 ====================
   staticRoutes: staticRoutesRouter,
+  staticRoute: staticRouteRouter,
 
   // ==================== DHCP静态租约管理路由 ====================
   dhcpStaticLeases: dhcpStaticLeaseRouter,
 
   // ==================== DNS转发器管理路由 ====================
   dnsForwarders: dnsForwarderRouter,
+
+  // ==================== 端口转发管理路由 ====================
+  portForwarding: portForwardingRouter,
+
+  // ==================== 防火墙自定义规则管理路由 ====================
+  firewallRule: firewallRuleRouter,
 
   // ==================== 路由管理路由 ====================
   routes: router({

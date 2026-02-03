@@ -2640,3 +2640,38 @@
   - [ ] 更新API文档
   - [ ] 创建用户使用指南
   - [ ] 更新todo.md标记完成项
+
+
+## Phase 1 剩余任务 (当前)
+
+### 1. 完成静态路由功能
+- [x] 创建staticRouteRouter.ts路由器
+- [x] 创建StaticRoutesDialog.tsx前端组件
+- [x] 集成到网络管理页面
+
+### 2. 完成端口转发功能
+- [x] 创建portForwardingRouter.ts路由器
+- [x] 创建portForwardingApplier.ts配置应用器
+- [x] 创建PortForwardingDialog.tsx前端组件
+- [x] 集成到网络管理页面
+
+### 3. 实现防火墙自定义规则功能
+- [x] 创建firewallRuleApplier.ts配置应用器
+- [x] 创建firewallRuleRouter.ts路由器
+- [ ] 创建FirewallRulesDialog.tsx前端组件(结构与端口转发类似,留待后续实现)
+- [x] 支持源/目标IP过滤
+- [x] 支持端口/协议过滤
+- [x] 集成到网络管理页面
+
+### 4. 实现网络诊断工具
+- [x] 后端API已存在(diagnostics.ts)
+- [ ] 创建NetworkDiagnosticsPanel.tsx前端组件(留待后续实现)
+- [ ] 实现Ping工具UI
+- [ ] 实现Traceroute工具UI
+- [ ] 实现Nslookup工具UI
+- [ ] 集成到网络管理页面
+
+### 5. 集成到网络管理页面
+- [x] 创建NetworkManagementNew.tsx页面
+- [x] 添加所有功能入口
+- [x] 统一配置管理机制
