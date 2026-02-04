@@ -2723,3 +2723,15 @@
 - [x] 添加DNS转发器入口
 - [x] 添加网络诊断工具入口
 - [x] 统一UI风格和交互逻辑
+
+
+## 紧急修复: 网络接口配置更新验证错误 (已完成)
+
+### 问题描述
+用户报告网络接口配置更新时出现Zod验证错误,所有可选字段(ipaddr/netmask/gateway/dns等)都报"expected string, received null"错误
+
+### 修复任务
+- [x] 定位网络接口更新API的Zod schema定义
+- [x] 将所有可选字段改为`.nullish()`(允许null/undefined/不传)
+- [x] 在updatePort mutation中过滤null和undefined值
+- [x] 同步修复createPort的schema保持一致性
