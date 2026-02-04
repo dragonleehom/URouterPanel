@@ -52,10 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // 使用fetch直接调用API避免tRPC hook限制
       const response = await fetch('/api/trpc/localAuth.validateSession?input=' + encodeURIComponent(JSON.stringify({ token: tokenToValidate })));
-      const data = await response.json();
-      const result = data.result.data;
       
-      if (result.valid && result.user) {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // tRPC响应格式: { result: { data: { valid, user } } }
+      const result = data?.result?.data;
+      
+      if (result && result.valid && result.user) {
         setUser(result.user);
         setToken(tokenToValidate);
       } else {
