@@ -462,3 +462,71 @@ export const qosRules = mysqlTable("qos_rules", {
 
 export type QosRule = typeof qosRules.$inferSelect;
 export type InsertQosRule = typeof qosRules.$inferInsert;
+
+
+/**
+ * 本地用户表
+ * 用于路由器系统的本地认证(独立于Manus OAuth)
+ */
+export const localUsers = mysqlTable("local_users", {
+  id: int("id").autoincrement().primaryKey(),
+  username: varchar("username", { length: 64 }).notNull().unique(), // 用户名
+  passwordHash: varchar("passwordHash", { length: 255 }).notNull(), // bcrypt密码哈希
+  role: mysqlEnum("role", ["admin", "user"]).default("user").notNull(), // 角色
+  enabled: int("enabled").default(1).notNull(), // 启用状态
+  lastLoginAt: timestamp("lastLoginAt"), // 最后登录时间
+  lastLoginIp: varchar("lastLoginIp", { length: 45 }), // 最后登录IP
+  failedLoginAttempts: int("failedLoginAttempts").default(0), // 失败登录次数
+  lockedUntil: timestamp("lockedUntil"), // 锁定到期时间
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LocalUser = typeof localUsers.$inferSelect;
+export type InsertLocalUser = typeof localUsers.$inferInsert;
+
+/**
+ * SSH访问控制配置表
+ * 存储SSH服务器的安全配置
+ */
+export const sshConfig = mysqlTable("ssh_config", {
+  id: int("id").autoincrement().primaryKey(),
+  port: int("port").default(22).notNull(), // SSH端口
+  permitRootLogin: mysqlEnum("permitRootLogin", ["yes", "no", "prohibit-password"]).default("prohibit-password").notNull(), // 是否允许root登录
+  passwordAuthentication: int("passwordAuthentication").default(1).notNull(), // 是否允许密码认证
+  pubkeyAuthentication: int("pubkeyAuthentication").default(1).notNull(), // 是否允许公钥认证
+  allowUsers: text("allowUsers"), // 允许登录的用户列表(逗号分隔)
+  denyUsers: text("denyUsers"), // 禁止登录的用户列表(逗号分隔)
+  maxAuthTries: int("maxAuthTries").default(6), // 最大认证尝试次数
+  loginGraceTime: int("loginGraceTime").default(120), // 登录宽限时间(秒)
+  clientAliveInterval: int("clientAliveInterval").default(300), // 客户端保活间隔(秒)
+  clientAliveCountMax: int("clientAliveCountMax").default(3), // 客户端保活最大次数
+  // 配置状态管理字段
+  pendingChanges: int("pendingChanges").default(0),
+  lastAppliedAt: timestamp("lastAppliedAt"),
+  applyStatus: mysqlEnum("applyStatus", ["pending", "success", "failed"]).default("pending"),
+  applyError: text("applyError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SshConfig = typeof sshConfig.$inferSelect;
+export type InsertSshConfig = typeof sshConfig.$inferInsert;
+
+/**
+ * 会话表
+ * 存储用户登录会话信息
+ */
+export const sessions = mysqlTable("sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(), // 关联local_users表
+  token: varchar("token", { length: 255 }).notNull().unique(), // JWT token
+  ipAddress: varchar("ipAddress", { length: 45 }), // 登录IP地址
+  userAgent: text("userAgent"), // 浏览器User-Agent
+  lastActivityAt: timestamp("lastActivityAt").defaultNow().notNull(), // 最后活动时间
+  expiresAt: timestamp("expiresAt").notNull(), // 过期时间
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Session = typeof sessions.$inferSelect;
+export type InsertSession = typeof sessions.$inferInsert;
