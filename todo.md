@@ -2735,3 +2735,31 @@
 - [x] 将所有可选字段改为`.nullish()`(允许null/undefined/不传)
 - [x] 在updatePort mutation中过滤null和undefined值
 - [x] 同步修复createPort的schema保持一致性
+
+
+## 部署脚本检查和完善 (已完成)
+
+### 任务描述
+检查项目中是否存在update脚本,确保能在物理硬件上刷新、构建和启动最新的Web管理界面功能
+
+### 任务清单
+- [x] 查找项目中的update脚本或部署脚本
+- [x] 分析脚本功能,识别缺失部分
+- [x] update.sh脚本已存在且功能完善,包含:
+  - [x] Git拉取最新代码
+  - [x] 安装/更新依赖(pnpm install)
+  - [x] 数据库迁移(pnpm db:push)
+  - [x] 构建项目(pnpm build)
+  - [x] 重启服务(systemctl restart)
+- [x] DEPLOYMENT.md文档已存在且内容详尽
+
+
+## 功能验证清单创建 (已完成)
+
+### 任务描述
+创建详细的功能验证清单和问题反馈模板,帮助用户在物理硬件上逐个验证Web管理界面的所有功能
+
+### 任务清单
+- [x] 创建TESTING.md功能验证清单文档
+- [x] 创建BUG_REPORT_TEMPLATE.md问题反馈模板
+- [x] 创建scripts/collect-logs.sh日志收集脚本
