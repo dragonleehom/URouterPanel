@@ -4,6 +4,9 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import Login from "./pages/Login";
 import DashboardLayout from "./components/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import NetworkManagement from "./pages/NetworkManagement";
@@ -38,7 +41,14 @@ import HardwareMonitor from "./pages/HardwareMonitor";
 function Router() {
   // make sure to consider if you need authentication for certain routes
   return (
-    <DashboardLayout>
+    <Switch>
+      {/* 公开路由 - 登录页面 */}
+      <Route path="/login" component={Login} />
+      
+      {/* 受保护的路由 - 需要登录 */}
+      <Route>
+        <ProtectedRoute>
+          <DashboardLayout>
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/network" component={NetworkManagement} />
@@ -88,8 +98,11 @@ function Router() {
         </Route>
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
-      </Switch>
-    </DashboardLayout>
+          </Switch>
+          </DashboardLayout>
+        </ProtectedRoute>
+      </Route>
+    </Switch>
   );
 }
 
@@ -97,10 +110,12 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster position="top-right" />
-          <Router />
-        </TooltipProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster position="top-right" />
+            <Router />
+          </TooltipProvider>
+        </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

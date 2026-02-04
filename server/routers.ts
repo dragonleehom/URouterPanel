@@ -16,6 +16,8 @@ import { dnsForwarderRouter } from "./dnsForwarderRouter";
 import { portForwardingRouter } from "./portForwardingRouter";
 import { firewallRuleRouter } from "./firewallRuleRouter";
 import { localAuthRouter } from "./localAuthRouter";
+import { userManagementRouter } from "./userManagementRouter";
+import { sshConfigRouter } from "./sshConfigRouter";
 import { getSystemStats, getSystemHistory, getServiceStatus } from "./systemMonitor";
 import { getAllHardwareInfo, getCPUInfo, getMemoryInfo, getDiskInfo, getGPUInfo } from "./hardwareMonitor";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -36,6 +38,8 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   localAuth: localAuthRouter,
+  userManagement: userManagementRouter,
+  sshConfig: sshConfigRouter,
   systemMonitor: router({
     getStats: publicProcedure.query(async () => {
       return await getSystemStats();

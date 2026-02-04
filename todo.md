@@ -2825,3 +2825,48 @@
 - [ ] 测试SSH配置功能
 - [ ] 测试会话超时
 - [ ] 保存checkpoint
+
+
+## 安全功能完善 - Phase 2 (当前任务)
+
+### 1. 路由守卫和认证上下文
+- [x] 创建AuthContext提供全局认证状态
+- [x] 创建ProtectedRoute组件保护路由
+- [x] 在App.tsx中集成路由守卫
+- [x] 实现会话超时自动退出逻辑
+- [x] 添加登录路由到App.tsx
+
+### 2. 用户管理后端API
+- [x] 创建userManagementRouter.ts
+- [x] 实现获取用户列表API
+- [x] 实现创建用户API
+- [x] 实现更新用户API
+- [x] 实现删除用户API
+- [x] 实现修改密码API
+- [ ] 实现获取登录历史API(可从 sessions表查询)
+
+### 3. 用户管理前端UI
+- [ ] 创建SystemSettings.tsx页面
+- [ ] 创建UserManagement.tsx组件
+- [ ] 实现用户列表展示
+- [ ] 实现添加用户对话框
+- [ ] 实现编辑用户对话框
+- [ ] 实现删除用户确认对话框
+- [ ] 实现修改密码对话框
+- [ ] 实现登录历史展示
+
+### 4. SSH访问控制后端API
+- [x] 创建sshConfigRouter.ts
+- [x] 实现获取SSH配置API
+- [x] 实现更新SSH配置API
+- [x] 配置应用器集成在router中
+- [x] 实现修改/etc/ssh/sshd_config
+- [x] 实现重启sshd服务
+
+### 5. SSH访问控制前端UI
+- [ ] 创建SshConfig.tsx组件
+- [ ] 实现SSH端口配置
+- [ ] 实现认证方式配置
+- [ ] 实现允许/禁止用户列表配置
+- [ ] 实现超时设置配置
+- [ ] 集成保存/应用/复位机制
