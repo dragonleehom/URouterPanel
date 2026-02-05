@@ -11,8 +11,9 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { getDb } from '../db';
-import { networkPorts } from '../../drizzle/schema';
+import { networkPorts, localUsers } from '../../drizzle/schema';
 import { eq } from 'drizzle-orm';
+import { hashPassword } from './localAuthService';
 
 const execAsync = promisify(exec);
 
@@ -239,6 +240,50 @@ async function applyDefaultFirewallPolicy(): Promise<void> {
 }
 
 /**
+ * 确保默认管理员用户存在
+ */
+async function ensureDefaultUser(): Promise<void> {
+  try {
+    console.log('[Init] 检查默认管理员用户...');
+    
+    const db = await getDb();
+    if (!db) {
+      console.error('[Init] 数据库不可用,跳过用户初始化');
+      return;
+    }
+    
+    // 检查是否已有用户
+    const existingUsers = await db.select().from(localUsers);
+    
+    if (existingUsers.length > 0) {
+      console.log(`[Init] 检测到 ${existingUsers.length} 个已有用户,跳过默认用户创建`);
+      return;
+    }
+    
+    console.log('[Init] 未检测到用户,创建默认管理员账号...');
+    
+    // 创建默认管理员用户: URouterOS / password
+    const defaultUsername = 'URouterOS';
+    const defaultPassword = 'password';
+    const passwordHash = await hashPassword(defaultPassword);
+    
+    await db.insert(localUsers).values({
+      username: defaultUsername,
+      passwordHash: passwordHash,
+      role: 'admin',
+      enabled: 1,
+    });
+    
+    console.log(`[Init] ✅ 默认管理员账号创建成功`);
+    console.log(`[Init]    用户名: ${defaultUsername}`);
+    console.log(`[Init]    密码: ${defaultPassword}`);
+    console.log(`[Init]    ⚠️  首次登录后请立即修改密码!`);
+  } catch (error) {
+    console.error('[Init] 创建默认用户失败:', error);
+  }
+}
+
+/**
  * 启动网络监控服务
  */
 async function startNetworkMonitoring(): Promise<void> {
@@ -268,7 +313,10 @@ export async function initializeOnStartup(): Promise<void> {
   console.log('');
   
   try {
-    // 1. 检查数据库中是否已有配置
+    // 1. 确保默认管理员用户存在
+    await ensureDefaultUser();
+    
+    // 2. 检查数据库中是否已有配置
     console.log('[Init] 检查现有配置...');
     const db = await getDb();
     if (!db) {
@@ -287,7 +335,7 @@ export async function initializeOnStartup(): Promise<void> {
     } else {
       console.log('[Init] 未检测到配置,开始自动配置...');
       
-      // 2. 检测可用网卡
+      // 3. 检测可用网卡
       const interfaces = await detectNetworkInterfaces();
       
       if (interfaces.length === 0) {
@@ -295,22 +343,22 @@ export async function initializeOnStartup(): Promise<void> {
       } else {
         console.log(`[Init] 检测到 ${interfaces.length} 个网卡`);
         
-        // 3. 创建默认WAN配置(第一个网卡)
+        // 4. 创建默认WAN配置(第一个网卡)
         await createDefaultWANConfig(interfaces[0]);
         
-        // 4. 如果有第二个网卡,创建默认LAN配置
+        // 5. 如果有第二个网卡,创建默认LAN配置
         if (interfaces.length > 1) {
           await createDefaultLANConfig(interfaces[1]);
         } else {
           console.log('[Init] 只有一个网卡,跳过LAN配置');
         }
         
-        // 5. 应用默认防火墙策略
+        // 6. 应用默认防火墙策略
         await applyDefaultFirewallPolicy();
       }
     }
     
-    // 6. 启动网络监控服务(无论是否有配置都启动)
+    // 7. 启动网络监控服务(无论是否有配置都启动)
     await startNetworkMonitoring();
     
     console.log('');
