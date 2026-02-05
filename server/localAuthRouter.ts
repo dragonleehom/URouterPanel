@@ -29,6 +29,13 @@ export const localAuthRouter = router({
           userAgent
         );
 
+        // 设置cookie
+        if (ctx.res) {
+          ctx.res.setHeader('Set-Cookie', [
+            `auth_token=${result.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}` // 7天
+          ]);
+        }
+
         return result;
       } catch (error: any) {
         throw new TRPCError({
@@ -60,17 +67,17 @@ export const localAuthRouter = router({
     }),
 
   /**
-   * 验证会话
+   * 验证会话 - 从cookie中读取token
    */
   validateSession: publicProcedure
-    .input(
-      z.object({
-        token: z.string(),
-      })
-    )
-    .query(async ({ input }) => {
+    .query(async ({ ctx }) => {
       try {
-        const user = await localAuthService.validateSession(input.token);
+        // 从cookie中读取token
+        const token = ctx.req?.headers?.cookie?.split(';').find(c => c.trim().startsWith('auth_token='))?.split('=')[1];
+        if (!token) {
+          return { valid: false, error: 'No token found' };
+        }
+        const user = await localAuthService.validateSession(token);
         return { valid: true, user };
       } catch (error: any) {
         return { valid: false, error: error.message };

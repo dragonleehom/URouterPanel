@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,7 @@ import { Loader2, AlertCircle, Router } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -17,9 +19,8 @@ export default function Login() {
 
   const loginMutation = trpc.localAuth.login.useMutation({
     onSuccess: (data) => {
-      // 保存token到localStorage
-      localStorage.setItem("auth_token", data.token);
-      localStorage.setItem("auth_user", JSON.stringify(data.user));
+      // 使用AuthContext的login函数更新状态
+      login(data.token, data.user);
       
       // 跳转到仪表盘
       setLocation("/");

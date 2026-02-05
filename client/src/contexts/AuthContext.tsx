@@ -50,8 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 验证会话
   const validateSession = async (tokenToValidate: string) => {
     try {
-      // 使用fetch直接调用API避免tRPC hook限制
-      const response = await fetch('/api/trpc/localAuth.validateSession?input=' + encodeURIComponent(JSON.stringify({ token: tokenToValidate })));
+      // 使用fetch直接调用API，不传token参数，后端从cookie读取
+      const response = await fetch('/api/trpc/localAuth.validateSession?batch=1', {
+        credentials: 'include' // 确保发送cookie
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -59,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const data = await response.json();
       
-      // tRPC响应格式: { result: { data: { valid, user } } }
-      const result = data?.result?.data;
+      // tRPC batch响应格式: [{ result: { data: { valid, user } } }]
+      const result = data[0]?.result?.data;
       
       if (result && result.valid && result.user) {
         setUser(result.user);
