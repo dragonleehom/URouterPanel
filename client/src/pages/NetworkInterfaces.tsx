@@ -1547,14 +1547,47 @@ function DeviceConfigTab() {
 // ==================== 主组件 ====================
 export default function NetworkInterfaces() {
   const [activeTab, setActiveTab] = useState<string>("ports");
+  
+  // 应用所有配置
+  const applyAllConfigs = trpc.networkConfig.applyAllConfigs.useMutation({
+    onSuccess: (data) => {
+      const successCount = data.results.filter(r => r.success).length;
+      const failedCount = data.results.filter(r => !r.success).length;
+      
+      if (data.success) {
+        toast.success("所有配置已应用");
+      } else {
+        toast.warning("部分配置应用失败", {
+          description: `成功: ${successCount}, 失败: ${failedCount}`
+        });
+      }
+    },
+    onError: (error) => {
+      toast.error(`应用配置失败: ${error.message}`);
+    },
+  });
+  
   return (
     <div className="p-6 space-y-6">
-      {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">网络接口配置</h1>
-        <p className="text-sm text-gray-600 mt-1">
-          配置网络接口、设备和全局网络参数
-        </p>
+      {/* 页面标题和操作按钮 */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">网络接口配置</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            配置网络接口、设备和全局网络参数
+          </p>
+        </div>
+        <Button 
+          onClick={() => applyAllConfigs.mutate()} 
+          disabled={applyAllConfigs.isPending}
+          size="lg"
+        >
+          {applyAllConfigs.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
+          <Play className="mr-2 h-4 w-4" />
+          应用所有配置
+        </Button>
       </div>
 
       {/* 网络配置标签页 */}
