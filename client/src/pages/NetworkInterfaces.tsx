@@ -932,7 +932,7 @@ function InterfaceConfigTab() {
         toast.success("接口配置已保存并应用到系统");
       } else {
         toast.warning("配置已保存，但应用失败: " + result.message);
-        if ('errors' in result && result.errors && result.errors.length > 0) {
+        if ('errors' in result && result.errors && Array.isArray(result.errors) && result.errors.length > 0) {
           result.errors.forEach((error: string) => {
             toast.error(error);
           });
